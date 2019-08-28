@@ -16,6 +16,7 @@ if not _G.TUNING.TELEPORTATOMOD.WORLDS then
 end
 local WORLDS = _G.TUNING.TELEPORTATOMOD.WORLDS
 
+
 AddGlobalClassPostConstruct("map/storygen", "Story",  function(self) -- bugfix of gamecode, the original function returns nil if the task is no valid starttask (it returns _G.GetRandomItem(task_nodes).task instead of _G.GetRandomItem(task_nodes) )
     local function FindStartingTask(self,task_nodes)
         local startTasks = {}
@@ -34,7 +35,7 @@ if _G.next(WORLDS) then
     -- stuff from DarkXero to make adventure progress:
     local io = _G.io
     local json = _G.json
-    local modfoldername = "Teleportato" -- adjust this to the workshop folder name after uploading!
+    local modfoldername = "workshop-756229217" -- adjust this to the workshop folder name after uploading!
     local tmp_filepath = "../mods/"..modfoldername.."/adventure"
 
     _G.MakeTemporalAdventureFile = function(json_string)

@@ -1,15 +1,15 @@
 --- ############# Worldjump code by DarkXero! 
 
-local function PlayerExitOverworld(player)
-    if TheWorld.ismastershard then -- now also cave has the worldjump component
-        TheWorld.components.worldjump:OnPlayerExitOverworld(player)
+local function PlayerExitWorld(player)
+    if TheWorld.components.worldjump then
+        TheWorld.components.worldjump:OnPlayerExitWorld(player)
     end
 end
 
 -- Load the decoded data from the persistent string on new spawn
 local function OnPlayerSpawn(world, player)
-    if world.ismastershard then  -- after a worldjump we always spawn in forest, even if the jump was started in cave
-        player:ListenForEvent("onremove", PlayerExitOverworld) -- add listener to notice overwolrd leaving (entering cave)
+    player:ListenForEvent("onremove", PlayerExitWorld) -- add listener to notice overwolrd leaving (entering cave)
+    if world.ismastershard then  -- after a worldjump we always spawn in forest, so only spawn stuff there.
         world:DoTaskInTime(0, function(world)
             local worldjump = world.components.worldjump
             local userid = player.userid
@@ -61,8 +61,8 @@ local function OnPlayerSpawn(world, player)
 end
 
 local function OnPlayerDespawn(world, player)
-    if TheWorld.components.worldjump then
-        TheWorld.components.worldjump:SavePlayerData(player) -- save player data when leaving overworld (leaving game or entering caves)
+    if world.components.worldjump then
+        world.components.worldjump:SavePlayerData(player) -- save player data when leaving overworld (leaving game or entering caves)
     end
 end
 
@@ -90,7 +90,7 @@ local WorldJump = Class(function(self, inst)
     self.saveage = self.player_data.saveage
 end)
 
-function WorldJump:OnPlayerExitOverworld(player) 
+function WorldJump:OnPlayerExitWorld(player) 
     if TheWorld.components.worldjump and player and player.migration then
         TheWorld.components.worldjump:SavePlayerData(player) -- save player data when leaving overworld (leaving game or entering caves)
     end
@@ -145,11 +145,12 @@ function WorldJump:SavePlayerData(pl)
         stuff.builder_data = builder_data
         beard_data = pl.components.beard and pl.components.beard:OnSave() or nil-- added by serp
         stuff.beard_data = beard_data
+        stuff.timefromsave = GetTime()
         self.player_data_save[pl.userid] = stuff -- save or overload the stuff of this player
     else -- in case of worldjump
         -- print("SavePlayerData worldjump")
         for k, v in pairs(AllPlayers) do -- all players that are online and in overworld
-            -- print("SavePlayerData save data for "..tostring(v))
+            print("SavePlayerData save data for "..tostring(v))
             stuff = {}
             if v.prefab=="wx78" then
                 stuff.level_data = {level=v.level > 0 and v.level or nil}
@@ -165,13 +166,16 @@ function WorldJump:SavePlayerData(pl)
             stuff.builder_data = builder_data
             beard_data = v.components.beard and v.components.beard:OnSave() or nil-- added by serp
             stuff.beard_data = beard_data
+            stuff.timefromsave = GetTime()
             self.player_data_save[v.userid] = stuff
         end
         self.player_data_save.saveinventory = self.saveinventory
         self.player_data_save.savebuilder = self.savebuilder
         self.player_data_save.saveage = self.saveage
-        local encoded_data = json.encode(self.player_data_save)
-        TheSim:SetPersistentString(self.info_dir, encoded_data, true) -- only save it in string when the worldjump is done.
+        if self.inst.ismastershard then -- only for master shard
+            local encoded_data = json.encode(self.player_data_save)
+            TheSim:SetPersistentString(self.info_dir, encoded_data, true) -- only save it in string when the worldjump is done.
+        end
     end
     -- print("hier should be saved now ,"..tostring(pl))
 	
@@ -203,34 +207,40 @@ end
 -- Since we parse AllPlayers, all the players have to be on the jumping master shard
 -- A dedicated server won't count itself for the player count
 function WorldJump:DoJump(keepage,keepinventory,keeprecipes)
-	
-    if not self.inst.ismastershard then -- no stuff is transfered if world is not mastershard (because the file save location is different from mastershard and mastershard is the one where you will spawn first)
-        _G.TheNet:Announce("WorldJump: World is not mastershard. No stuff (inventory,age and so on) will be transfered.")
+	if self.inst.ismastershard then
+        if keepage==nil or keepage then -- by default, everything is true
+            self.saveage = true
+        else -- if false
+            self.saveage = false
+        end
+        if keepinventory==nil or keepinventory then    
+            self.saveinventory = true
+        else
+            self.saveinventory = false
+        end
+        if keeprecipes==nil or keeprecipes then
+            self.savebuilder = true
+        else
+            self.savebuilder = false
+        end
+
+        if _G.TUNING.TELEPORTATOMOD.GEMAPIActive and #SHARD_LIST>0 then 
+            print("DoShardWorldJumpifmastershard")
+            _G.TheWorld.shard.components.shard_teleplayersave:RequestPlayerData()  -- notify cave that he should send us his data... within the function that is called by cave within forest, receive and save the cavedata within the forest data and call DoJumpFinalWithCave
+            return
+        else
+            print("worldjump ohne shards")
+            self:SavePlayerData()
+            TheNet:SendWorldResetRequestToServer()
+        end
     end
-    
-    if keepage==nil or keepage then -- by default, everything is true
-        self.saveage = true
-    else -- if false
-        self.saveage = false
-    end
-    if keepinventory==nil or keepinventory then    
-        self.saveinventory = true
-    else
-        self.saveinventory = false
-    end
-    if keeprecipes==nil or keeprecipes then
-        self.savebuilder = true
-    else
-        self.savebuilder = false
-    end
-        
-    
-    -- if not TheNet:GetPlayerCount() == #AllPlayers then -- if not all players are on the same world, print a log entry...
-        -- print("All players not in the jumping world, won't save stuff!")
-    -- end
+end
+
+function WorldJump:DoJumpFinalWithCave() -- only used with GEM API and it contains also cave informtaion
+    -- wir können jetzt auch zählen, wieviele im cave sind... dh evtl können wir noch hier abbrechen, wenns zu wenige spieler sind (und auch hier ein announce dafür machen)
+    print("DoJumpFinalWithCave")
     self:SavePlayerData()
     TheNet:SendWorldResetRequestToServer()
-
-end
+end    
 
 return WorldJump

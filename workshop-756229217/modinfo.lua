@@ -1,8 +1,8 @@
 -- This information tells other players more about the mod
 name = "Teleportato"
-description = "Adds the teleportato parts to the World generation and makes the Divining Rod craftable. In the settings of mod, you can choose what should happen, when teleportato is complete and if a new world should be generated if activated. Don't add this mod to already generated world and don't deactivate it if you had it active at world generation! Admin can use say-command /worldjump to generate new world. Stuff from players at cave wont be saved!   Other mods can add adventure like progress!"
+description = "Adds the teleportato parts to the World generation and makes the Divining Rod craftable. In the settings of mod, you can choose what should happen, when teleportato is complete and if a new world should be generated if activated. Don't add this mod to already generated world and don't deactivate it if you had it active at world generation! Admin can use say-command /worldjump to generate new world. Stuff from players at cave wont be saved!\nOther mods can add adventure like worlds!"
 author = "Serpens66"
-version = "1.124"
+version = "1.125"
 
 -- This is the URL name of the mod's thread on the forum; the part after the index.php? and before the first & in the URL
 -- Example:
@@ -145,6 +145,17 @@ configuration_options =
 		default = true,
 	},
     {
+		name = "adv_itemcarrysandbox",
+		label = "Adventure Stuff",
+		hover = "Only if adventure mod is enabled. Able to carry over your stuff from -Maxwells Door- to adventure?",
+		options = 
+		{
+            {description = "no,nothing", data = false, hover="Nothing you got within -Maxwells Door- will carry over to adventure"},
+            {description = "yes, everything", data = true, hover="Everything you got within -Maxwells Door- will carry over to adventure"},
+        },                   
+		default = false,
+    },
+    {
 		name = "null_option",
 		label = "",
 		hover = "",
@@ -282,7 +293,7 @@ configuration_options =
                         {description = "IgnoreBarren", data = 1, hover = "Ignore Impassable and Barren, when placing."},
                         {description = "IgnoreAll", data = 2, hover = "Ignores also other setpieces, but it could be at the same location like other things."},
                         {description = "IgBar+Req", data = 4, hover = "Same as IgnoreBarren, but wordl will generate again until all parts are placed."},
-                        {description = "IgAll+Req", data = 5, hover = "Same as IgBar+Req but with IgnoreAll"},
+                        {description = "IgAll+Req", data = 5, hover = "Same as IgBar+Req but with IgnoreAll"}, -- usually IgnoreAll will be 100% gurantee, but not if modworldgenmain spawns them as story setpieces, which is only true for adventure mode
                     },
         default = 4,
     },
@@ -303,7 +314,7 @@ configuration_options =
         hover = "Should base/parts also spawn at moon island?",
         options =   {
                         {description = "No", data = false, hover = ""},
-                        {description = "Yes", data = true, hover = "Also works for other -level_set_piece_blocker- areas! (currently only the islands)"},
+                        {description = "Yes", data = true, hover = "Also works for other -level_set_piece_blockers-! (currently only moonislands)"},
                     },
         default = true,
     },

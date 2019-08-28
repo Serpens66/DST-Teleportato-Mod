@@ -11,7 +11,7 @@ local function DelayedSaveAndClean()
     -- With this, stuff will be safe in the component
     -- SaveGame(false)
     TheWorld:PushEvent("ms_save") -- save with the save animation. this is to make sure adventure stuff is not lost when the game crashes between generation and first day.
- 
+    print("clean adventure file")
     -- Clean temporal file so other servers don't load adventure levels by mistake
     CleanTemporalAdventureFile()
 end
@@ -44,6 +44,9 @@ local function OnInit(inst, self)
     local adventure_stuff = GetTemporalAdventureContent()
     if adventure_stuff then
         self.adventure_info = adventure_stuff
+        -- print("adventure_info")
+        -- print(self.adventure_info)
+        inst:DoTaskInTime(0, self.MakeSave, self) -- at first start of the world after generation. otherwise adventure_stuff will be "" 
     else
         local adventure_info = self.adventure_info
  
@@ -82,7 +85,7 @@ local function OnInit(inst, self)
                         while _~=i and level_list[i] == entry do -- should not be a problem, except defaultpositions are wrong
                             level_list[i] = MyPickSome(1,TUNING.TELEPORTATOMOD.DEFAULTPOSITIONS[i+1])[1] -- make sure the same world is not used more than once
                             if not level_list[i] then -- should not happen if mod is build correct
-                                print("AdventureMod: FEHLER: modsetting worlds and also default worlds are not enough to cover every chapter! Make game crash now"..makecrash)
+                                print("AdventureMod: ERROR: modsetting worlds and also default worlds are not enough to cover every chapter! Make game crash now"..makecrash)
                             end
                         end
                     end
@@ -99,14 +102,14 @@ local function OnInit(inst, self)
     
     -- if self.adventure_info.level_list then 
         -- TUNING.TELEPORTATOMOD.LEVEL = self.adventure_info.level_list[self.adventure_info.current_level] or 1 -- this is to now the level when loading a world
-        -- print("Adventure1: LEVEL defined to "..tostring(TUNING.TELEPORTATOMOD.LEVEL)) -- is nil when world just generated, then we will set it to _GEN in StartStuff fn
+        -- print("Adventure1: LEVEL  "..tostring(self.adventure_info.level_list[self.adventure_info.current_level])) -- is nil when world just generated, then we will set it to _GEN in StartStuff fn
         -- TUNING.TELEPORTATOMOD.CHAPTER = self.adventure_info.current_level or 0 -- the load from the component, if world is 0, it will be nil most likely
-        -- print("Adventure1: CHAPTER defined to "..tostring(TUNING.TELEPORTATOMOD.CHAPTER))
+        -- print("Adventure1: CHAPTER "..tostring(self.adventure_info.current_level))
     -- else
         -- TUNING.TELEPORTATOMOD.LEVEL = 1 -- this is to now the level when loading a world
-        -- print("Adventure: (level_list nil) LEVEL defined to "..tostring(TUNING.TELEPORTATOMOD.LEVEL)) -- is nil when world just generated, then we will set it to _GEN in StartStuff fn
+        -- print("Adventure: (level_list nil) LEVEL "..tostring(1)) -- is nil when world just generated, then we will set it to _GEN in StartStuff fn
         -- TUNING.TELEPORTATOMOD.CHAPTER = 0 -- the load from the component, if world is 0, it will be nil most likely
-        -- print("Adventure: CHAPTER defined to "..tostring(TUNING.TELEPORTATOMOD.CHAPTER))
+        -- print("Adventure: (level_list nil) CHAPTER "..tostring(0))
     -- end 
  
     local s = ""
@@ -116,13 +119,15 @@ local function OnInit(inst, self)
     print("Adventure Mod: The Following worlds will load: "..s)
 
     -- inst:DoTaskInTime(1, DelayedSaveAndClean) -- call it instead only after worldgeneration in modmain
+    
 end
 
 
 local AdventureJump = Class(function(self, inst)
 	self.inst = inst
 	self.adventure_info = {}
-    inst:DoTaskInTime(0, OnInit, self)
+    OnInit(inst,self)
+    -- inst:DoTaskInTime(0, OnInit, self)
 end)
 
 function AdventureJump:OnSave()
@@ -154,8 +159,9 @@ function AdventureJump:DoJump(keepage,keepinventory,keeprecipes)
     end
 end
 
-function AdventureJump:MakeSave() -- save stuff in components, to prevent datalost after worldgenereation if game crashes. Should only be needed directly after world generation
-	self.inst:DoTaskInTime(1, DelayedSaveAndClean)
+function AdventureJump:MakeSave(self) -- save stuff in components, to prevent datalost after worldgenereation if game crashes. Should only be needed directly after world generation
+	print("MakeSave")
+    self.inst:DoTaskInTime(1, DelayedSaveAndClean)
 end
 
 return AdventureJump
