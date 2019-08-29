@@ -17,19 +17,6 @@ end
 local WORLDS = _G.TUNING.TELEPORTATOMOD.WORLDS
 
 
-AddGlobalClassPostConstruct("map/storygen", "Story",  function(self) -- bugfix of gamecode, the original function returns nil if the task is no valid starttask (it returns _G.GetRandomItem(task_nodes).task instead of _G.GetRandomItem(task_nodes) )
-    local function FindStartingTask(self,task_nodes)
-        local startTasks = {}
-        for task_id, nodes in pairs(task_nodes) do
-            if #self.tasks[task_id].locks == 0 or self.tasks[task_id].locks[1] == LOCKS.NONE then
-                table.insert(startTasks, nodes)
-            end
-        end
-        return #startTasks > 0 and startTasks[math.random(#startTasks)] or _G.GetRandomItem(task_nodes)
-    end
-    self._FindStartingTask = FindStartingTask
-end)
-
 if _G.next(WORLDS) then
     print("HIER modworldgenmain tele MIT WORLDS")
     -- stuff from DarkXero to make adventure progress:
@@ -205,7 +192,7 @@ AddTaskSetPreInitAny(function(tasksetdata)
     
     if _G.next(WORLDS) then -- if another mod wants to load his worlds
         -- print("TTTTX")
-        tasksetdata = WORLDS[_G.TUNING.TELEPORTATOMOD.LEVEL_GEN].taskdatafunctions~=nil and WORLDS[_G.TUNING.TELEPORTATOMOD.LEVEL_GEN].taskdatafunctions[tasksetdata.location](tasksetdata)
+        tasksetdata = WORLDS[_G.TUNING.TELEPORTATOMOD.LEVEL_GEN].taskdatafunctions~=nil and WORLDS[_G.TUNING.TELEPORTATOMOD.LEVEL_GEN].taskdatafunctions[tasksetdata.location] and WORLDS[_G.TUNING.TELEPORTATOMOD.LEVEL_GEN].taskdatafunctions[tasksetdata.location](tasksetdata) or tasksetdata
     end
     if tasksetdata.add_teleportato or (not _G.next(WORLDS) and string.match(GetModConfigData("spawnteleworld"),tasksetdata.location)) then
         if not (tasksetdata.ordered_story_setpieces~=nil and _G.next(tasksetdata.ordered_story_setpieces)) then -- only add teleportato layouts, if other mod did not define ordered_story_setpieces, which should ONLY be used for the original DS worlds!

@@ -163,8 +163,8 @@ local function LoadLevelAndDoStuff(world)
     end
     
     world:DoTaskInTime(3,function(world) -- check if we have all parts
-        if _G.TheWorld.components.adv_startstuff.partpositions==nil then
-            _G.TheWorld.components.adv_startstuff.partpositions = {}
+        if world.components.adv_startstuff.partpositions==nil then
+            world.components.adv_startstuff.partpositions = {}
         end
         local portal = nil
         if _G.TUNING.TELEPORTATOMOD.IsWorldWithTeleportato()==true then 
@@ -206,7 +206,7 @@ local function LoadLevelAndDoStuff(world)
                 end
             end
         end
-        if _G.next(WORLDS) and _G.TUNING.TELEPORTATOMOD.WORLDS[_G.TUNING.TELEPORTATOMOD.LEVEL].name=="Maxwells Door" then -- check if adventure portal was placed
+        if _G.next(WORLDS) and world.ismastershard and _G.TUNING.TELEPORTATOMOD.WORLDS[_G.TUNING.TELEPORTATOMOD.LEVEL].name=="Maxwells Door" then -- check if adventure portal was placed
             local advportal = _G.TheSim:FindFirstEntityWithTag("adventure_portal")
             if advportal==nil then
                 portal = nil
