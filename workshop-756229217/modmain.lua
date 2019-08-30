@@ -331,20 +331,13 @@ local function TitleStufff(inst) -- inst is player
         elseif chapter and chapter == 0 then
             title = WORLDS[level].name
             subtitle = "Prologue"
-            _G.TheCamera:SetDistance(12)
         end
         print("HIER TITLESTUFF funktion chapter: "..tostring(chapter).."title: "..tostring(title).." subtitle: "..tostring(subtitle))
         _G.TheFrontEnd:ShowTitle(title,subtitle)
         GLOBAL.TheFrontEnd:Fade(true, 1, function() -- makes screen unclickable afterwards. first number is the time the fading out takes (then first function is called). second number is the time to screen will stay (then second function is called). the second funtion is called before the first
             GLOBAL.SetPause(false) -- SetPause(false) fixes it 
             GLOBAL.TheFrontEnd:HideTitle()
-        end, 4 ,function() GLOBAL.SetPause(false) end, "white")
-        inst:DoTaskInTime(4,function(inst)
-            if chapter and chapter==0 then
-                _G.TheCamera:SetDefault()
-            end
-        end)
-        
+        end, 4 ,function() GLOBAL.SetPause(false) end, "white")        
     end
 end
 
