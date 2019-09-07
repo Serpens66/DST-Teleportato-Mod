@@ -22,8 +22,7 @@ if _G.next(WORLDS) then
     -- stuff from DarkXero to make adventure progress:
     local io = _G.io
     local json = _G.json
-    local modfoldername = "workshop-756229217" -- adjust this to the workshop folder name after uploading!
-    local tmp_filepath = "../mods/"..modfoldername.."/adventure"
+    local tmp_filepath = MODROOT.."adventure"
 
     _G.MakeTemporalAdventureFile = function(json_string)
         local advfile = io.open(tmp_filepath, "w")
@@ -42,7 +41,7 @@ if _G.next(WORLDS) then
         local advfile = io.open(tmp_filepath, "r")
 
         if advfile == nil then
-            print(modfoldername..": no adventure override found...")
+            print(modname..": no adventure override found...")
             return nil
         end
 
