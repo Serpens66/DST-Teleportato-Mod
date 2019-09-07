@@ -233,7 +233,11 @@ local function fn()
     MakeObstaclePhysics(inst, 1.1)
 
     inst.AnimState:SetBank("teleporter")
-    inst.AnimState:SetBuild("teleportato_build")
+    if next(TUNING.TELEPORTATOMOD.WORLDS) then
+	    inst.AnimState:SetBuild("teleportato_adventure_build")
+	else
+	    inst.AnimState:SetBuild("teleportato_build")
+	end
     inst.AnimState:PlayAnimation("idle_off", true)
 
     for part, symbol in pairs(partSymbols) do

@@ -6,24 +6,7 @@
 -- teleportato_ring
 
 
--- info:
--- loading order of postinits:
--- worldpostinit
--- other postinits
--- playerpostinit
--- but playerpostinit can be before (when loading a game) and also sometimes after (when starting a new game or on dedicated servern) the loading the world is complete
-
-
--- in postinit  der teleparts die aufzurufende fklt usw iwie abspeichern und in liste packen
--- in DoTaskInTime 0 der world eine fkt aufrufen, welche dann nacheinander den ganzen dostartstuff der world macht.
--- danach darin auch den teleporato kram machen, denn jetzt sind die level/chapter kram bekannt
-
--- den level/chapter kram für player muss man wohl mit DoTaskInTime 0 UND einem check machen, der sicherstellt, dass die world mit ihrem kram fertig ist.
--- wenn nicht, dann halt nochmal DoTaskInTime machen.. oder gibts da nen besseren weg?
-
-
-
-print("HIER ist modmain")
+-- print("HIER ist modmain")
 
 local _G = GLOBAL
 local helpers = _G.require("tele_helpers") 
@@ -39,6 +22,8 @@ _G.TUNING.TELEPORTATOMOD.LEVELINFOLOADED = false -- if you can use TUNING.TELEPO
 local function IsLEVELINFOLOADED()
     return _G.TUNING.TELEPORTATOMOD.LEVELINFOLOADED
 end
+
+modimport("scripts/tele_itemskinsave") -- save the skins for items for worldjump
 
 _G.TUNING.TELEPORTATOMOD.IsWorldWithTeleportato = function() -- as soon LEVELINFOLOADED is true, you can use this
     if _G.TUNING.TELEPORTATOMOD.WorldWithTeleportato==nil then
@@ -117,7 +102,8 @@ if _G.TUNING.TELEPORTATOMOD.GEMAPIActive then
                     end
                 end
             end
-            
+            -- print(#shardReceivedList)
+            -- print(#_G.SHARD_LIST)
             if #shardReceivedList==#_G.SHARD_LIST then -- sobald shardReceivedList dieselben id enthält wie shardSendList, kann worldjump gemacht werden
                 shardReceivedList = {}
                 _G.TheWorld.components.worldjump:DoJumpFinalWithCave() -- this will also save for all current players on master
@@ -126,6 +112,34 @@ if _G.TUNING.TELEPORTATOMOD.GEMAPIActive then
     end
     _G.AddShardRPCHandler("TeleSerp", "PlayerSave", SavePlayerDatainMaster)
 end
+
+
+_G.TUNING.TELEPORTATOMOD.LEVEL = nil -- is set in momdain to _GEN after world generation, or else is extracted from adv_startstuff component
+_G.TUNING.TELEPORTATOMOD.CHAPTER = nil
+
+if _G.next(WORLDS) then
+    _G.TUNING.TELEPORTATOMOD.WorldWithTeleportato = nil
+else
+    _G.TUNING.TELEPORTATOMOD.WorldWithTeleportato = GetModConfigData("spawnteleworld")
+end
+
+-- your mod can overwrite the teleportato modsettings:
+_G.TUNING.TELEPORTATOMOD.ITEMNUMBERTRANS = _G.TUNING.TELEPORTATOMOD.ITEMNUMBERTRANS~=nil and _G.TUNING.TELEPORTATOMOD.ITEMNUMBERTRANS or GetModConfigData("inventorysavenumber") -- number of transferred items
+_G.TUNING.TELEPORTATOMOD.TELENEWWORLD = _G.TUNING.TELEPORTATOMOD.TELENEWWORLD~=nil and _G.TUNING.TELEPORTATOMOD.TELENEWWORLD or GetModConfigData("newworld")
+_G.TUNING.TELEPORTATOMOD.RegenerateHealth = _G.TUNING.TELEPORTATOMOD.RegenerateHealth~=nil and _G.TUNING.TELEPORTATOMOD.RegenerateHealth or GetModConfigData("RegeneratePlayerHealth")
+_G.TUNING.TELEPORTATOMOD.RegenerateSanity = _G.TUNING.TELEPORTATOMOD.RegenerateSanity~=nil and _G.TUNING.TELEPORTATOMOD.RegenerateSanity or GetModConfigData("RegeneratePlayerSanity")
+_G.TUNING.TELEPORTATOMOD.RegenerateHunger = _G.TUNING.TELEPORTATOMOD.RegenerateHunger~=nil and _G.TUNING.TELEPORTATOMOD.RegenerateHunger or GetModConfigData("RegeneratePlayerHunger")
+_G.TUNING.TELEPORTATOMOD.Enemies = _G.TUNING.TELEPORTATOMOD.Enemies~=nil and _G.TUNING.TELEPORTATOMOD.Enemies or GetModConfigData("Enemies")
+_G.TUNING.TELEPORTATOMOD.Thulecite = _G.TUNING.TELEPORTATOMOD.Thulecite~=nil and _G.TUNING.TELEPORTATOMOD.Thulecite or GetModConfigData("Thulecite")
+_G.TUNING.TELEPORTATOMOD.Ancient = _G.TUNING.TELEPORTATOMOD.Ancient~=nil and _G.TUNING.TELEPORTATOMOD.Ancient or GetModConfigData("Ancient")
+_G.TUNING.TELEPORTATOMOD.Chests = _G.TUNING.TELEPORTATOMOD.Chests~=nil and _G.TUNING.TELEPORTATOMOD.Chests or GetModConfigData("Chests")
+_G.TUNING.TELEPORTATOMOD.min_players = _G.TUNING.TELEPORTATOMOD.min_players~=nil and _G.TUNING.TELEPORTATOMOD.min_players or GetModConfigData("min_players")
+_G.TUNING.TELEPORTATOMOD.agesave = _G.TUNING.TELEPORTATOMOD.agesave~=nil and _G.TUNING.TELEPORTATOMOD.agesave or GetModConfigData("agesave")
+_G.TUNING.TELEPORTATOMOD.inventorysave = _G.TUNING.TELEPORTATOMOD.inventorysave~=nil and _G.TUNING.TELEPORTATOMOD.inventorysave or GetModConfigData("inventorysave")
+_G.TUNING.TELEPORTATOMOD.recipesave = _G.TUNING.TELEPORTATOMOD.recipesave~=nil and _G.TUNING.TELEPORTATOMOD.recipesave or GetModConfigData("recipesave")
+_G.TUNING.TELEPORTATOMOD.DSlike = _G.TUNING.TELEPORTATOMOD.DSlike~=nil and _G.TUNING.TELEPORTATOMOD.DSlike or GetModConfigData("DSlike")
+
+
 
 local function DoStartStuff(world) -- könnte man evtl mit prefabpostinit world und POPULATING machen, damts nur einmal beim erstellen der welt gemacht wird?
     -- correct the globals if the world just generated
@@ -148,9 +162,14 @@ local function LoadLevelAndDoStuff(world)
     if _G.next(WORLDS) then
         _G.TUNING.TELEPORTATOMOD.LEVEL = world.components.adv_startstuff.adv_level or 1 -- if world was just created, this will be overwritten from DoStartStuff
         print("Adventure: LEVEL defined to "..tostring(_G.TUNING.TELEPORTATOMOD.LEVEL))
-        _G.TUNING.TELEPORTATOMOD.CHAPTER = world.components.adv_startstuff.adv_chapter or 0
+        _G.TUNING.TELEPORTATOMOD.CHAPTER = world.components.adv_startstuff.adv_chapter or 1
         print("Adventure: CHAPTER defined to "..tostring(_G.TUNING.TELEPORTATOMOD.CHAPTER))
         world.components.adv_startstuff:DoStartStuffNow(DoStartStuff,"DoStartStuff")
+        
+        if world.ismastershard and world.components.adventurejump.adventure_info.level_list~=nil and _G.GetTableSize(world.components.adventurejump.adventure_info.level_list)==6 then
+            _G.TUNING.TELEPORTATOMOD.CHAPTER = _G.TUNING.TELEPORTATOMOD.CHAPTER + 1 -- wont be executed for caves, but currently it is not a big problem
+            print("Teleportato Adventure: Fixed Chapter by adding +1") -- for updating old versions of the mod. can be removed after some months, when all users should already use the version 1.144 or higher
+        end
         
         local stri = ""
         if WORLDS[_G.TUNING.TELEPORTATOMOD.LEVEL].taskdatafunctions~=nil then -- if index nil error arrives, it may be because LEVEL in DoStartStuff was not defined yet...
@@ -236,30 +255,6 @@ end
 -- print("WORLDS tele modmain:")
 -- print(_G.next(WORLDS))
 
-_G.TUNING.TELEPORTATOMOD.LEVEL = nil -- is set in momdain to _GEN after world generation, or else is extracted from adv_startstuff component
-_G.TUNING.TELEPORTATOMOD.CHAPTER = nil
-
-if _G.next(WORLDS) then
-    _G.TUNING.TELEPORTATOMOD.WorldWithTeleportato = nil
-else
-    _G.TUNING.TELEPORTATOMOD.WorldWithTeleportato = GetModConfigData("spawnteleworld")
-end
-
--- your mod can overwrite the teleportato modsettings:
-_G.TUNING.TELEPORTATOMOD.ITEMNUMBERTRANS = _G.TUNING.TELEPORTATOMOD.ITEMNUMBERTRANS~=nil and _G.TUNING.TELEPORTATOMOD.ITEMNUMBERTRANS or GetModConfigData("inventorysavenumber") -- number of transferred items
-_G.TUNING.TELEPORTATOMOD.TELENEWWORLD = _G.TUNING.TELEPORTATOMOD.TELENEWWORLD~=nil and _G.TUNING.TELEPORTATOMOD.TELENEWWORLD or GetModConfigData("newworld")
-_G.TUNING.TELEPORTATOMOD.RegenerateHealth = _G.TUNING.TELEPORTATOMOD.RegenerateHealth~=nil and _G.TUNING.TELEPORTATOMOD.RegenerateHealth or GetModConfigData("RegeneratePlayerHealth")
-_G.TUNING.TELEPORTATOMOD.RegenerateSanity = _G.TUNING.TELEPORTATOMOD.RegenerateSanity~=nil and _G.TUNING.TELEPORTATOMOD.RegenerateSanity or GetModConfigData("RegeneratePlayerSanity")
-_G.TUNING.TELEPORTATOMOD.RegenerateHunger = _G.TUNING.TELEPORTATOMOD.RegenerateHunger~=nil and _G.TUNING.TELEPORTATOMOD.RegenerateHunger or GetModConfigData("RegeneratePlayerHunger")
-_G.TUNING.TELEPORTATOMOD.Enemies = _G.TUNING.TELEPORTATOMOD.Enemies~=nil and _G.TUNING.TELEPORTATOMOD.Enemies or GetModConfigData("Enemies")
-_G.TUNING.TELEPORTATOMOD.Thulecite = _G.TUNING.TELEPORTATOMOD.Thulecite~=nil and _G.TUNING.TELEPORTATOMOD.Thulecite or GetModConfigData("Thulecite")
-_G.TUNING.TELEPORTATOMOD.Ancient = _G.TUNING.TELEPORTATOMOD.Ancient~=nil and _G.TUNING.TELEPORTATOMOD.Ancient or GetModConfigData("Ancient")
-_G.TUNING.TELEPORTATOMOD.Chests = _G.TUNING.TELEPORTATOMOD.Chests~=nil and _G.TUNING.TELEPORTATOMOD.Chests or GetModConfigData("Chests")
-_G.TUNING.TELEPORTATOMOD.min_players = _G.TUNING.TELEPORTATOMOD.min_players~=nil and _G.TUNING.TELEPORTATOMOD.min_players or GetModConfigData("min_players")
-_G.TUNING.TELEPORTATOMOD.agesave = _G.TUNING.TELEPORTATOMOD.agesave~=nil and _G.TUNING.TELEPORTATOMOD.agesave or GetModConfigData("agesave")
-_G.TUNING.TELEPORTATOMOD.inventorysave = _G.TUNING.TELEPORTATOMOD.inventorysave~=nil and _G.TUNING.TELEPORTATOMOD.inventorysave or GetModConfigData("inventorysave")
-_G.TUNING.TELEPORTATOMOD.recipesave = _G.TUNING.TELEPORTATOMOD.recipesave~=nil and _G.TUNING.TELEPORTATOMOD.recipesave or GetModConfigData("recipesave")
-_G.TUNING.TELEPORTATOMOD.DSlike = _G.TUNING.TELEPORTATOMOD.DSlike~=nil and _G.TUNING.TELEPORTATOMOD.DSlike or GetModConfigData("DSlike")
 
 
 
@@ -315,9 +310,9 @@ if not helpers.exists_in_table("functionpostloadworldONCE",_G.TUNING.TELEPORTATO
 end
 
 local function TitleStufff(inst) -- inst is player
-    print("TitleStufff")
+    -- print("TitleStufff")
     if _G.ThePlayer==inst and inst.HUD and _G.TheWorld:HasTag("forest") then -- we have to use this TAg check instead of ismastershard, because otherwise it will return false for clients
-        print("TitleStufff1")
+        -- print("TitleStufff1")
         _G.TUNING.TELEPORTATOMOD.CHAPTER = _G.TUNING.TELEPORTATOMOD.CHAPTER or inst.mynetvarAdvChapter:value()
         _G.TUNING.TELEPORTATOMOD.LEVEL = _G.TUNING.TELEPORTATOMOD.LEVEL or inst.mynetvarAdvLevel:value()
         local chapter = _G.TUNING.TELEPORTATOMOD.CHAPTER
@@ -325,19 +320,21 @@ local function TitleStufff(inst) -- inst is player
         
         local title = "test"
         local subtitle = "test"
-        if chapter and chapter > 0 then -- show title and chapter
+        if chapter and chapter > 1 then -- show title and chapter
             title = WORLDS[level].name
-            subtitle = _G.STRINGS.UI.SANDBOXMENU.CHAPTERS[chapter]
-        elseif chapter and chapter == 0 then
+            subtitle = _G.STRINGS.UI.SANDBOXMENU.CHAPTERS[chapter-1] -- our chapter goes from 1 to 7 (including prologue and epilogue), while DS chapter goes from 1 to 5/6
+        elseif chapter and chapter == 1 then
             title = WORLDS[level].name
             subtitle = "Prologue"
         end
         print("HIER TITLESTUFF funktion chapter: "..tostring(chapter).."title: "..tostring(title).." subtitle: "..tostring(subtitle))
         _G.TheFrontEnd:ShowTitle(title,subtitle)
-        GLOBAL.TheFrontEnd:Fade(true, 1, function() -- makes screen unclickable afterwards. first number is the time the fading out takes (then first function is called). second number is the time to screen will stay (then second function is called). the second funtion is called before the first
-            GLOBAL.SetPause(false) -- SetPause(false) fixes it 
-            GLOBAL.TheFrontEnd:HideTitle()
-        end, 4 ,function() GLOBAL.SetPause(false) end, "white")        
+        
+        -- following does not work so well, sometimes works, sometimes not, so we simply remove it
+        -- GLOBAL.TheFrontEnd:Fade(true, 1, function() -- makes screen unclickable afterwards. first number is the time the fading out takes (then first function is called). second number is the time to screen will stay (then second function is called). the second funtion is called before the first
+            -- GLOBAL.SetPause(false) -- SetPause(false) fixes it 
+            -- GLOBAL.TheFrontEnd:HideTitle()
+        -- end, 4 ,function() GLOBAL.SetPause(false) end, "white")        
     end
 end
 
@@ -345,7 +342,7 @@ end
 local function StartItems(inst)
     print("HIER startitems LEVEL: "..tostring(_G.TUNING.TELEPORTATOMOD.LEVEL).." CHAPTER: "..tostring(_G.TUNING.TELEPORTATOMOD.CHAPTER))
     if SERVER_SIDE and _G.TheWorld.ismastershard then
-        print("mynetvarTitleStufff:set")
+        -- print("mynetvarTitleStufff:set")
         inst.mynetvarTitleStufff:set(1) -- send info to clients, to show the game title at game start
     end
     if _G.TUNING.TELEPORTATOMOD.functionatplayerfirstspawn~=nil then -- eg spawn some stuff for plaers joining the first time
@@ -356,10 +353,10 @@ end
 
 
 local function OnDirtyEventTitleStufff(inst) -- this is called on client, if the server does inst.mynetvarTitleStufff:set(...)
-    print("OnDirtyEventTitleStufff")
+    -- print("OnDirtyEventTitleStufff")
     if CLIENT_SIDE then -- only on client .. 
         local val = inst.mynetvarTitleStufff:value()
-        print("OnDirtyEventTitleStufff2 "..tostring(val))
+        -- print("OnDirtyEventTitleStufff2 "..tostring(val))
         if val==1 then
             inst:DoTaskInTime(0.01,TitleStufff)
         end
@@ -373,7 +370,7 @@ local function DoPlayerStuffAfterLevelLoaded(inst)
     end
     if _G.next(WORLDS) then
         if SERVER_SIDE and inst.mynetvarAdvLevel:value()==0 then -- if it was not already set prevously (eg if player and world loading are at the same time)
-            print("SetChapterStuff")
+            -- print("SetChapterStuff")
             inst.mynetvarAdvChapter:set(_G.TUNING.TELEPORTATOMOD.CHAPTER)
             inst.mynetvarAdvLevel:set(_G.TUNING.TELEPORTATOMOD.LEVEL)
         end
@@ -393,7 +390,7 @@ local function OnPlayerPostInit(inst) -- called for server and client
     end
     if _G.next(WORLDS) then
         if _G.TUNING.TELEPORTATOMOD.CHAPTER==nil then -- at client it is nil
-            _G.TUNING.TELEPORTATOMOD.CHAPTER = 0
+            _G.TUNING.TELEPORTATOMOD.CHAPTER = 1
         end
         if _G.TUNING.TELEPORTATOMOD.LEVEL==nil then
             _G.TUNING.TELEPORTATOMOD.LEVEL = 1
@@ -430,7 +427,7 @@ local function OnPlayerPostInit(inst) -- called for server and client
     if SERVER_SIDE then
         inst.mynetvarLEVELINFOLOADED:set(_G.TUNING.TELEPORTATOMOD.LEVELINFOLOADED) -- may be true already
         if _G.TUNING.TELEPORTATOMOD.LEVELINFOLOADED==true and _G.next(WORLDS) then -- then already set it up here to save time
-            print("SetChapterStuff")
+            -- print("SetChapterStuff")
             inst.mynetvarAdvChapter:set(_G.TUNING.TELEPORTATOMOD.CHAPTER)
             inst.mynetvarAdvLevel:set(_G.TUNING.TELEPORTATOMOD.LEVEL)
         end
@@ -439,7 +436,7 @@ local function OnPlayerPostInit(inst) -- called for server and client
 end
 AddPlayerPostInit(OnPlayerPostInit)
 if _G.next(WORLDS) then -- if another mod wants us to load a specific world
-    print("WORLDS tele modmain MIT WORLDS")
+    -- print("WORLDS tele modmain MIT WORLDS")
     local function ConfirmAdventure(player, portal, answer)
         if type(portal) == "table" then
             if answer then
@@ -454,8 +451,8 @@ if _G.next(WORLDS) then -- if another mod wants us to load a specific world
         end
     end
     AddModRPCHandler("adventureSerp", "confirm", ConfirmAdventure)
-else
-    print("WORLDS tele modmain KEINE WORLDS")
+-- else
+    -- print("WORLDS tele modmain KEINE WORLDS")
 end
 
 
@@ -509,20 +506,20 @@ end
 
 
 local function RecognizeTelePart(world,inst) -- call this only once for every part after world is generated and loaded! if more than one of each part exist, we do not remove them, only one will be saved
-    print("RecognizeTelePart0 "..tostring(world).." "..tostring(inst))
+    -- print("RecognizeTelePart0 "..tostring(world).." "..tostring(inst))
     if TUNING.TELEPORTATOMOD.IsWorldWithTeleportato()==true then
-        print("RecognizeTelePart "..tostring(world).." "..tostring(inst))
+        -- print("RecognizeTelePart "..tostring(world).." "..tostring(inst))
         if inst~=nil then
             if world.components.adv_startstuff.partpositions==nil then
                 world.components.adv_startstuff.partpositions = {}
             end
             if world.components.adv_startstuff.partpositions[inst.prefab]==nil then
                 world.components.adv_startstuff.partpositions[inst.prefab] = inst:GetPosition() -- is saved and loaded within this components
-                print("RecognizeTelePart set position for "..tostring(inst.prefab).." to "..tostring(world.components.adv_startstuff.partpositions[inst.prefab]))
+                -- print("RecognizeTelePart set position for "..tostring(inst.prefab).." to "..tostring(world.components.adv_startstuff.partpositions[inst.prefab]))
             end
             -- print(_G.GetTableSize(world.components.adv_startstuff.partpositions))
             if _G.GetTableSize(world.components.adv_startstuff.partpositions)==5 and not _G.TUNING.TELEPORTATOMOD.DSlike then -- if the last part was added, spawn the eneimies around them
-                print("call SpawnEnemies")
+                -- print("call SpawnEnemies")
                 helpers.SpawnEnemies(inst,world) -- some enemies at start of the game at the part positions
             end
         end
@@ -533,7 +530,7 @@ end
         -- _G.TheWorld.components.adv_startstuff:DoStartStuffIn(0,RecognizeTelePart,"RecognizeTelePart"..inst.prefab,inst)
 
 local function TeleportatoPostInit(inst)
-    print("TeleportatoPostInit")
+    -- print("TeleportatoPostInit")
     
     inst:DoTaskInTime(0,helpers.CallthisfnIfthatfnIsTrue,_G.TheWorld.components.adv_startstuff.DoStartStuffNow,IsLEVELINFOLOADED,100,_G.TheWorld.components.adv_startstuff,RecognizeTelePart,"RecognizeTelePart"..inst.prefab,inst)
     
@@ -543,7 +540,9 @@ local function TeleportatoPostInit(inst)
     
     local _OnSave = inst.OnSave
     local function OnSave(inst,data)
-        _OnSave(inst,data) -- call the previous
+        if _OnSave~=nil then
+            _OnSave(inst,data) -- call the previous
+        end
         data.activatedonce = inst.activatedonce
         data.completed = inst.completed
     end
@@ -551,7 +550,9 @@ local function TeleportatoPostInit(inst)
     
     local _OnLoad = inst.OnLoad
     local function OnLoad(inst,data)
-        _OnLoad(inst,data) -- call the previous
+        if _OnLoad~=nil then
+            _OnLoad(inst,data) -- call the previous
+        end
         if data then
             if data.activatedonce then
                 inst.activatedonce = data.activatedonce
@@ -636,7 +637,7 @@ AddPrefabPostInit("teleportato_base", TeleportatoPostInit)
 AddPrefabPostInit("world", function(world) -- prefabpostinits are never called for clients
     
     if SERVER_SIDE then -- just to make it more clear that everything is server
-        print("worldpostinit")
+        -- print("worldpostinit")
         world:DoTaskInTime(0,function() LoadLevelAndDoStuff(world) end)
         
         if world.ismastershard or _G.TUNING.TELEPORTATOMOD.GEMAPIActive then -- with APIGem we also add worldjump to cave with limited functionality to get info about players in caves

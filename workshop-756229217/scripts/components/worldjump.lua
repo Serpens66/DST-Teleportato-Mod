@@ -15,16 +15,10 @@ local function OnPlayerSpawn(world, player)
             local userid = player.userid
             local t = worldjump.player_ids
             local found = false
-            
-            for i, v in ipairs(t) do
-                if v == userid then
-                    found = true
-                    break
-                end
-            end
+            found = table.contains(t,userid)
             if not found then
                 local jumpdata = worldjump.player_data[userid]
-                -- print("WERT playerspawned")
+                print("WERT playerspawned")
                 if jumpdata then
                     -- print("WERT playerspawned jumpdata")
                     if worldjump.saveage then
@@ -45,13 +39,18 @@ local function OnPlayerSpawn(world, player)
                             jumpdata.inventory_data.items = transitems
                             jumpdata.inventory_data.equip = {} -- delete quipped items
                         end
+                        player.components.inventory.ignoresound = true -- no sound when giving them to player
                         player.components.inventory:OnLoad(jumpdata.inventory_data, jumpdata.inventory_references)
+                        player.components.inventory.ignoresound = false
                         -- print("HIER inventory_data and reference: "..tostring(jumpdata.inventory_data).." , "..tostring(jumpdata.inventory_references))
                     -- else
                         -- print("HIER, saveinventory: "..tostring(saveinventory))
                     end
                     if worldjump.savebuilder then
                         player.components.builder:OnLoad(jumpdata.builder_data) -- added by serp
+                    end
+                    if TUNING.TELEPORTATOMOD.repickcharacter==false and jumpdata.prefab == player.prefab and jumpdata.skin_data then -- load skin, if forceload char and we have the same character selected again
+                        player.components.skinner:OnLoad(jumpdata.skin_data)
                     end
                     table.insert(t, userid)
                 end
@@ -77,7 +76,8 @@ local WorldJump = Class(function(self, inst)
 	-- jumping data
 	-- saves before jumping, loads when the world loads
 	self.player_data = {}
-    self:LoadPlayerData()
+    self:LoadPlayerData() -- loads everytime the fiel, so this infor is not saved within this component -> only the stuff from previous world is accessable, cause with the next jump this file is overwritten
+    -- print("playerdata loaded")
 	-- player ids get saved so game can determine if guy is a new spawn or not
 	-- if he is, then he gets looked up on the jumping data saved
 	self.player_ids = {}
@@ -127,6 +127,7 @@ function WorldJump:SavePlayerData(pl)
     local inventory_data, inventory_references = nil,nil
     local builder_data = nil
     local beard_data = nil
+    local skin_data = nil
     if pl and pl:HasTag("player") then -- only save for one specific player, eg when he leaves
         age_data = pl.components.age:OnSave()
         pl.components.inventory:DropEverythingWithTag("irreplaceable")
@@ -146,7 +147,10 @@ function WorldJump:SavePlayerData(pl)
         beard_data = pl.components.beard and pl.components.beard:OnSave() or nil-- added by serp
         stuff.beard_data = beard_data
         stuff.timefromsave = GetTime()
+        stuff.prefab = pl.prefab -- save also the prefab, so we can force load the same character after worldjump (within modmain)
         self.player_data_save[pl.userid] = stuff -- save or overload the stuff of this player
+        skin_data = pl.components.skinner:OnSave()-- added by serp
+        stuff.skin_data = skin_data
     else -- in case of worldjump
         -- print("SavePlayerData worldjump")
         for k, v in pairs(AllPlayers) do -- all players that are online and in overworld
@@ -167,7 +171,10 @@ function WorldJump:SavePlayerData(pl)
             beard_data = v.components.beard and v.components.beard:OnSave() or nil-- added by serp
             stuff.beard_data = beard_data
             stuff.timefromsave = GetTime()
+            stuff.prefab = v.prefab -- save also the prefab, so we can force load the same character after worldjump (within modmain)
             self.player_data_save[v.userid] = stuff
+            skin_data = v.components.skinner:OnSave()-- added by serp
+            stuff.skin_data = skin_data
         end
         self.player_data_save.saveinventory = self.saveinventory
         self.player_data_save.savebuilder = self.savebuilder

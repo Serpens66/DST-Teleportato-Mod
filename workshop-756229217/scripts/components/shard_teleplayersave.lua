@@ -46,8 +46,8 @@ return Class(function(self, inst)
     --------------------------------------------------------------------------
 
     
-    -- inst:ListenForEvent("shard_teleplayersave._requestdatadirty", function(inst) -- if the master sends a request via netvar to the slaves, save our data and send them via rpc
-    inst:ListenForEvent("shard_teleplayersave._requestdata", function(inst) -- if the master sends a request via netvar to the slaves, save our data and send them via rpc   
+    inst:ListenForEvent("shard_teleplayersave._requestdatadirty", function(inst) -- fornet_bool if the master sends a request via netvar to the slaves, save our data and send them via rpc
+    -- inst:ListenForEvent("shard_teleplayersave._requestdata", function(inst) -- for net_event if the master sends a request via netvar to the slaves, save our data and send them via rpc   
         print("_requestdatadirty")
         if not _ismastershard then -- only do it when you are not master
             if _requestdata:value()==true then

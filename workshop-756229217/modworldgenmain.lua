@@ -22,8 +22,7 @@ if _G.next(WORLDS) then
     -- stuff from DarkXero to make adventure progress:
     local io = _G.io
     local json = _G.json
-    local modfoldername = "workshop-756229217" -- adjust this to the workshop folder name after uploading!
-    local tmp_filepath = "../mods/"..modfoldername.."/adventure"
+    local tmp_filepath = MODROOT.."adventure"
 
     _G.MakeTemporalAdventureFile = function(json_string)
         local advfile = io.open(tmp_filepath, "w")
@@ -42,7 +41,7 @@ if _G.next(WORLDS) then
         local advfile = io.open(tmp_filepath, "r")
 
         if advfile == nil then
-            print(modfoldername..": no adventure override found...")
+            print(modname..": no adventure override found...")
             return nil
         end
 
@@ -58,25 +57,6 @@ if _G.next(WORLDS) then
 
         return adventure_stuff
     end
-
-
-    -- if not helpers.exists_in_table("LEVEL_GEN",_G) then -- in case another mod set it to some value to test a map
-    if _G.TUNING.TELEPORTATOMOD.LEVEL_GEN==nil then -- in case another mod set it to some value to test a map, dont ooverwerite it
-        _G.TUNING.TELEPORTATOMOD.LEVEL_GEN = 1
-        _G.TUNING.TELEPORTATOMOD.CHAPTER_GEN = 0
-        _G.ADVENTURE_STUFF = nil
-        local adventure_stuff = _G.GetTemporalAdventureContent() -- eg. {"current_level":3,"level_list":[3,4,5,1,6,7]}
-        if adventure_stuff then -- is only true, if we just adventure_jumped 
-            _G.ADVENTURE_STUFF = adventure_stuff
-            _G.TUNING.TELEPORTATOMOD.LEVEL_GEN = adventure_stuff.level_list[adventure_stuff.current_level] or 1
-            _G.TUNING.TELEPORTATOMOD.CHAPTER_GEN = adventure_stuff.current_level or 0
-            print("Adventure: adventurestuff loaded successfully")
-        end
-    end
-    if _G.TUNING.TELEPORTATOMOD.CHAPTER_GEN==nil then -- in case the other modder did not set chapter
-        _G.TUNING.TELEPORTATOMOD.CHAPTER_GEN = 0
-    end
-    print("Level gen1 is "..tostring(_G.TUNING.TELEPORTATOMOD.LEVEL_GEN).." Chapter is "..tostring(_G.TUNING.TELEPORTATOMOD.CHAPTER_GEN))
     
     -- Explanation of the WORLD table:
     -- name -> shown in title
@@ -87,11 +67,21 @@ if _G.next(WORLDS) then
     -- sample: table.insert(_G.TUNING.TELEPORTATOMOD.WORLDS, {name="Two Worlds", taskdatafunctions = {forest=AdventureTwoWorlds, cave=AlwaysTinyCave}, defaultpositions={4,5}, positions=GetModConfigData("twoworlds")})
     -- more detailed sample see adventure mod from me.
     
+    
+    -- the following is a bit complicated code to randomly choose the level for every chapter, based on the position settings of every world.
     _G.TUNING.TELEPORTATOMOD.POSITIONS = {{},{},{},{},{},{},{}}
     for i,W in ipairs(WORLDS) do
-        W.positions = string.split(W.positions, ",") --W.positions:_G.split(",") -- in modconfig tables as setting are not allowed, so we used strings and have to convert them here
-        for _,pos in ipairs(W.positions) do
-            table.insert(_G.TUNING.TELEPORTATOMOD.POSITIONS[_G.tonumber(pos)], i)
+        if W.positions then  -- is nil if there was an error loading the adventure mod
+            W.positions = string.split(W.positions, ",") --W.positions:_G.split(",") -- in modconfig tables as setting are not allowed, so we used strings and have to convert them here
+            for _,pos in ipairs(W.positions) do
+                table.insert(_G.TUNING.TELEPORTATOMOD.POSITIONS[_G.tonumber(pos)], i)
+            end
+        else
+            print("Teleportato ERROR: W.positions is nil?")
+            for k,v in pairs(W) do
+                print(k)
+                print(v)
+            end
         end
     end
     _G.TUNING.TELEPORTATOMOD.DEFAULTPOSITIONS = {{},{},{},{},{},{},{}} -- just in case user set too less worlds, then use the defaultpositions too fill
@@ -99,7 +89,64 @@ if _G.next(WORLDS) then
         for _,pos in ipairs(W.defaultpositions) do
             table.insert(_G.TUNING.TELEPORTATOMOD.DEFAULTPOSITIONS[pos], i)
         end
-    end    
+    end  
+    
+    local positions = _G.deepcopy(_G.TUNING.TELEPORTATOMOD.POSITIONS)
+    local defaultpositions = _G.deepcopy(_G.TUNING.TELEPORTATOMOD.DEFAULTPOSITIONS)
+    -- important: all _GEN values are only valid after the first generation of the world! when loading an existing world, they are worng and one should use component saves instead (in modmain)
+    if _G.TUNING.TELEPORTATOMOD.LEVEL_GEN==nil then -- in case another mod set it to some value to test a map, dont ooverwerite it
+        _G.TUNING.TELEPORTATOMOD.CHAPTER_GEN = 1 -- _GEN is only usable if the world was just generated. In other cases use the saved chapter/level stored in adv_startstuff, done in modmain
+        local adventure_stuff = _G.GetTemporalAdventureContent() -- eg. {"current_level":3,"level_list":[3,4,5,1,6,7]}
+        if adventure_stuff then -- is only true, if we just adventure_jumped 
+            _G.TUNING.TELEPORTATOMOD.LEVEL_GEN = adventure_stuff.level_list[adventure_stuff.current_level] or adventure_stuff.level_list[1]
+            _G.TUNING.TELEPORTATOMOD.CHAPTER_GEN = adventure_stuff.current_level or 1
+            print("Adventure: adventurestuff loaded successfully")
+        else -- if the game was started first time and we are in sandbox world chapter 1
+            local level_list = {}
+            local usedefault = false 
+            for i=1,7 do
+                level_list[i] = helpers.MyPickSome(1,positions[i])[1]
+                for _,entry in pairs(level_list) do
+                    while _~=i and level_list[i] == entry do
+                        level_list[i] = helpers.MyPickSome(1,positions[i])[1] -- make sure the same world is not used more than once
+                        if not level_list[i] then -- if there are too few worlds to only use each world once
+                            print("AdventureMod: WARNING: Not enough worlds are active, therefore modsettings are ignored and default settings used")
+                            usedefault = true
+                            break
+                        end
+                    end
+                    if usedefault then
+                        break
+                    end
+                end
+                if usedefault then
+                    break
+                end
+            end
+            if usedefault then -- make it again, but with default values this time
+                level_list = {}
+                for i=1,7 do
+                    level_list[i] = helpers.MyPickSome(1,defaultpositions[i])[1]
+                    for _,entry in pairs(level_list) do
+                        while _~=i and level_list[i] == entry do -- should not be a problem, except defaultpositions are wrong
+                            level_list[i] = helpers.MyPickSome(1,defaultpositions[i])[1] -- make sure the same world is not used more than once
+                            if not level_list[i] then -- should not happen if mod is build correct
+                                print("AdventureMod: ERROR: modsetting worlds and also default worlds are not enough to cover every chapter! Make game crash now"..makecrash)
+                            end
+                        end
+                    end
+                end
+            end
+            _G.TUNING.TELEPORTATOMOD.LEVEL_LIST_GEN = level_list
+            _G.TUNING.TELEPORTATOMOD.LEVEL_GEN = level_list[_G.TUNING.TELEPORTATOMOD.CHAPTER_GEN] -- the level for first chapter
+        end
+    end
+    if _G.TUNING.TELEPORTATOMOD.CHAPTER_GEN==nil then -- in case the other modder did not set chapter
+        _G.TUNING.TELEPORTATOMOD.CHAPTER_GEN = 1
+    end
+    print("Level gen1 is "..tostring(_G.TUNING.TELEPORTATOMOD.LEVEL_GEN).." Chapter is "..tostring(_G.TUNING.TELEPORTATOMOD.CHAPTER_GEN))
+    
+      
 else
     print("HIER modworldgenmain tele KEIN WORLDS")
 end
@@ -187,7 +234,7 @@ end)
 local tasksfile = require("map/tasks")
 local allTasks = tasksfile.GetAllTaskNames() -- get all loaded tasks. Is only used if spawntelemoonisland setting is true, cause this will circumvent the "level_set_piece_blocker"
 table.removearrayvalue(allTasks, "Make a pick") -- "Make a pick" is very near the starting location, in forest, so do not use it
-
+-- AddLevelPreInitAny(function(tasksetdata)
 AddTaskSetPreInitAny(function(tasksetdata)
     
     if _G.next(WORLDS) then -- if another mod wants to load his worlds
@@ -254,7 +301,7 @@ AddTaskSetPreInitAny(function(tasksetdata)
     end
     
 
-    if GetModConfigData("variateworld") and not _G.next(WORLDS) then -- if activated and no other mod wants to generate his world
+    if GetModConfigData("variateworld") and (not _G.next(WORLDS) or (_G.next(WORLDS) and _G.TUNING.TELEPORTATOMOD.WORLDS[_G.TUNING.TELEPORTATOMOD.LEVEL_GEN].name=="Maxwells Door" and _G.TUNING.TELEPORTATOMOD.sandboxpreconfigured==false)) then -- if activated and no other mod wants to generate his world
         if tasksetdata.location == "forest" then -- world variation only for forest currently
             tasksetdata.substitutes = {["spiderden"] = {perstory=1, pertask=1, weight=1}} -- make all spiderdens a random size
             
