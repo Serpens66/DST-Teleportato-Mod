@@ -2,7 +2,7 @@
 name = "Teleportato"
 description = "Adds the teleportato parts to the World generation and makes the Divining Rod craftable. In the settings of mod, you can choose what should happen, when teleportato is complete and if a new world should be generated if activated. Don't add this mod to already generated world and don't deactivate it if you had it active at world generation! Admin can use say-command /worldjump to generate new world. Stuff from players at cave wont be saved!\nOther mods can add adventure like worlds!"
 author = "Serpens66"
-version = "1.1445"
+version = "1.15"
 
 -- This is the URL name of the mod's thread on the forum; the part after the index.php? and before the first & in the URL
 -- Example:
@@ -100,7 +100,7 @@ configuration_options =
     {
 		name = "agesave",
 		label = "Save Days?",
-			hover = "Transfer -days survived-?",
+			hover = "Transfer -days survived- and beard and wx78 level?",
 		options =	{
 						{description = "No", data = false, hover = " "},
                         {description = "Yes", data = true, hover = " "},
@@ -145,6 +145,16 @@ configuration_options =
 		default = true,
 	},
     {
+		name = "statssave",
+		label = "Save Stats?",
+			hover = "Transfer current health/sanity/hunger values? (but minpercent 0.2, 0.3 and 0.4). So eg. never less than 20% health.",
+		options =	{
+						{description = "No", data = false, hover = " "},
+                        {description = "Yes", data = true, hover = " "},
+					},
+		default = false,
+	},
+    {
 		name = "adv_itemcarrysandbox",
 		label = "Adventure Stuff",
 		hover = "Only if adventure mod is enabled. Able to carry over your stuff from -Maxwells Door- to adventure?",
@@ -155,6 +165,16 @@ configuration_options =
         },                   
 		default = false,
     },
+    {
+		name = "announcepickparts",
+		label = "Announce Pick?",
+			hover = "Do a global announcment when someone picked a teleportato part?",
+		options =	{
+						{description = "No", data = false, hover = " "},
+                        {description = "Yes", data = true, hover = " "},
+					},
+		default = false,
+	},
     {
 		name = "null_option",
 		label = "",

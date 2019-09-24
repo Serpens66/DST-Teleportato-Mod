@@ -18,7 +18,7 @@ local function OnPlayerSpawn(world, player)
             found = table.contains(t,userid)
             if not found then
                 local jumpdata = worldjump.player_data[userid]
-                print("WERT playerspawned")
+                -- print("WERT playerspawned")
                 if jumpdata then
                     -- print("WERT playerspawned jumpdata")
                     if worldjump.saveage then
@@ -51,6 +51,17 @@ local function OnPlayerSpawn(world, player)
                     end
                     if TUNING.TELEPORTATOMOD.repickcharacter==false and jumpdata.prefab == player.prefab and jumpdata.skin_data then -- load skin, if forceload char and we have the same character selected again
                         player.components.skinner:OnLoad(jumpdata.skin_data)
+                    end
+                    if TUNING.TELEPORTATOMOD.statssave and jumpdata.stats_data~=nil then
+                        if jumpdata.stats_data["health"]~=nil and player.components.health then
+                            player.components.health:SetPercent(jumpdata.stats_data["health"])
+                        end
+                        if jumpdata.stats_data["sanity"]~=nil and player.components.sanity then
+                            player.components.sanity:SetPercent(jumpdata.stats_data["sanity"])
+                        end
+                        if jumpdata.stats_data["hunger"]~=nil and player.components.hunger then
+                            player.components.hunger:SetPercent(jumpdata.stats_data["hunger"])
+                        end                        
                     end
                     table.insert(t, userid)
                 end
@@ -128,6 +139,10 @@ function WorldJump:SavePlayerData(pl)
     local builder_data = nil
     local beard_data = nil
     local skin_data = nil
+    local stats_data = {}
+    local healthpercent = nil
+    local sanitypercent = nil
+    local hungerpercent = nil
     if pl and pl:HasTag("player") then -- only save for one specific player, eg when he leaves
         age_data = pl.components.age:OnSave()
         pl.components.inventory:DropEverythingWithTag("irreplaceable")
@@ -151,6 +166,13 @@ function WorldJump:SavePlayerData(pl)
         self.player_data_save[pl.userid] = stuff -- save or overload the stuff of this player
         skin_data = pl.components.skinner:OnSave()-- added by serp
         stuff.skin_data = skin_data
+        healthpercent = pl.components.health and pl.components.health:GetPercent() or 1
+        sanitypercent = pl.components.sanity and pl.components.sanity:GetPercent() or 1
+        hungerpercent = pl.components.hunger and pl.components.hunger:GetPercent() or 1
+        stats_data["health"] = healthpercent>0.2 and healthpercent or 0.2
+        stats_data["sanity"] = sanitypercent>0.3 and sanitypercent or 0.3
+        stats_data["hunger"] = hungerpercent>0.4 and hungerpercent or 0.4
+        stuff.stats_data = stats_data
     else -- in case of worldjump
         -- print("SavePlayerData worldjump")
         for k, v in pairs(AllPlayers) do -- all players that are online and in overworld
@@ -175,6 +197,13 @@ function WorldJump:SavePlayerData(pl)
             self.player_data_save[v.userid] = stuff
             skin_data = v.components.skinner:OnSave()-- added by serp
             stuff.skin_data = skin_data
+            healthpercent = v.components.health and v.components.health:GetPercent() or 1
+            sanitypercent = v.components.sanity and v.components.sanity:GetPercent() or 1
+            hungerpercent = v.components.hunger and v.components.hunger:GetPercent() or 1
+            stats_data["health"] = healthpercent>0.2 and healthpercent or 0.2
+            stats_data["sanity"] = sanitypercent>0.3 and sanitypercent or 0.3
+            stats_data["hunger"] = hungerpercent>0.4 and hungerpercent or 0.4
+            stuff.stats_data = stats_data
         end
         self.player_data_save.saveinventory = self.saveinventory
         self.player_data_save.savebuilder = self.savebuilder

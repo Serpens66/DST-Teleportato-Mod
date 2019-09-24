@@ -138,7 +138,8 @@ _G.TUNING.TELEPORTATOMOD.agesave = _G.TUNING.TELEPORTATOMOD.agesave~=nil and _G.
 _G.TUNING.TELEPORTATOMOD.inventorysave = _G.TUNING.TELEPORTATOMOD.inventorysave~=nil and _G.TUNING.TELEPORTATOMOD.inventorysave or GetModConfigData("inventorysave")
 _G.TUNING.TELEPORTATOMOD.recipesave = _G.TUNING.TELEPORTATOMOD.recipesave~=nil and _G.TUNING.TELEPORTATOMOD.recipesave or GetModConfigData("recipesave")
 _G.TUNING.TELEPORTATOMOD.DSlike = _G.TUNING.TELEPORTATOMOD.DSlike~=nil and _G.TUNING.TELEPORTATOMOD.DSlike or GetModConfigData("DSlike")
-
+_G.TUNING.TELEPORTATOMOD.statssave = _G.TUNING.TELEPORTATOMOD.statssave~=nil and _G.TUNING.TELEPORTATOMOD.statssave or GetModConfigData("statssave") -- health sanity, hunger
+_G.TUNING.TELEPORTATOMOD.announcepickparts = _G.TUNING.TELEPORTATOMOD.announcepickparts~=nil and _G.TUNING.TELEPORTATOMOD.announcepickparts or GetModConfigData("announcepickparts")
 
 
 local function DoStartStuff(world) -- könnte man evtl mit prefabpostinit world und POPULATING machen, damts nur einmal beim erstellen der welt gemacht wird?
@@ -664,9 +665,20 @@ AddPrefabPostInit("world", function(world) -- prefabpostinits are never called f
     end
 end)
 
+local function PickedFn(inst, data) -- announce picking of the parts
+	local picker = data and data.picker
+	if inst and picker then
+		if inst.prefab~=nil and (inst.prefab=="teleportato_box" or inst.prefab=="teleportato_ring" or inst.prefab=="teleportato_crank" or inst.prefab=="teleportato_potato") then
+            _G.TheNet:Announce(tostring(picker.name or picker.prefab).." picked up the "..tostring(_G.STRINGS.NAMES[string.upper(inst.prefab)] or inst.prefab).."!")
+        end
+	end
+end
 for _, prefab in ipairs({"teleportato_potato","teleportato_box","teleportato_ring","teleportato_crank"}) do
     AddPrefabPostInit(prefab, function(inst)
         helpers.MakeSlowPick(inst)
+        if _G.TUNING.TELEPORTATOMOD.announcepickparts then
+            inst:ListenForEvent("picked", PickedFn)
+        end
         inst:DoTaskInTime(0,helpers.CallthisfnIfthatfnIsTrue,_G.TheWorld.components.adv_startstuff.DoStartStuffNow,IsLEVELINFOLOADED,100,_G.TheWorld.components.adv_startstuff,RecognizeTelePart,"RecognizeTelePart"..inst.prefab,inst)
         -- _G.TheWorld.components.adv_startstuff:DoStartStuffIn(0,RecognizeTelePart,"RecognizeTelePart"..inst.prefab,inst)
     end)
