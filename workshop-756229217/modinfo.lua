@@ -1,8 +1,8 @@
 -- This information tells other players more about the mod
 name = "Teleportato"
-description = "Adds the teleportato parts to the World generation and makes the Divining Rod craftable. In the settings of mod, you can choose what should happen, when teleportato is complete and if a new world should be generated if activated. Don't add this mod to already generated world and don't deactivate it if you had it active at world generation! Admin can use say-command /worldjump to generate new world. Stuff from players at cave wont be saved!\nOther mods can add adventure like worlds!"
+description = "Adds the teleportato parts to the World generation and makes the Divining Rod craftable. In the settings of mod, you can choose what should happen, when teleportato is complete and if a new world should be generated if activated. Better don't add this mod to already generated world and don't deactivate it if you had it active at world generation! Admin can use say-command /worldjump to generate new world. Stuff from players at cave wont be saved (unless you have GEMAPI active)!\nOther mods can add adventure like worlds!"
 author = "Serpens66"
-version = "1.15"
+version = "1.279"
 
 -- This is the URL name of the mod's thread on the forum; the part after the index.php? and before the first & in the URL
 -- Example:
@@ -10,6 +10,9 @@ version = "1.15"
 -- becomes
 -- /files/file/202-sample-mods/
 forumthread = ""
+
+--Adds a priority to the mod. Loads it before or after other mods. This can help to fix various incompatibilities between other mods.
+priority = 8888
 
 -- This lets other players know if your mod is out of date, update it to match the current version in the game
 api_version = 10
@@ -35,12 +38,81 @@ configuration_options =
     {
 		name = "variateworld",
 		label = "Variate World?",
-		hover = "Worldsettings are randomly chosen at worldgeneration, worldsettings you set will have no effect! Use my mod -Increase Animals- for more variation.",
+		hover = "Worldsettings are randomly chosen at worldgeneration, your worldsettings will have no effect! Use my mod -Increase Animals- for more variation.",
 		options =	{
-						{description = "No", data = false, hover = " "},
-                        {description = "Yes", data = true, hover = " "},
+						{description = "No", data = false, hover = "Always the same worldsettings you chose."},
+                        {description = "Just islands", data = "justislands", hover = "Nothing is variated, but the -Variate Islands / Variate Event- option below works."},
+                        {description = "Yes, mixed Worlds", data = true, hover = "Medium, but small chance for easy/hard aspects"},
+                        {description = "Yes, easy Worlds", data = "easy", hover = " "},
+                        {description = "Yes, medium Worlds", data = "medium", hover = " "},
+                        {description = "Yes, hard Worlds", data = "hard", hover = " "},
+                        {description = "Yes, very hard Worlds", data = "very hard", hover = " "},
 					},
 		default = false,
+	},
+    {
+		name = "variate_islands",
+		label = "Number of Islands?",
+		hover = "If -Variate World- is enabled, how many islands should be generated on average (the more the smaller they get)",
+		options =	{
+						{description = "Default", data = false, hover = "Vanilla islands"},
+                        {description = "Random", data = "random", hover = "Random amount of islands"},
+                        {description = "Few", data = "few", hover = "10-30% of the task-count"},
+                        {description = "Medium", data = "medium", hover = "30-55% of the task-count"},
+                        {description = "Many", data = "many", hover = "50-80% of the task-count"},
+                        {description = "All", data = "all", hover = "Tries to put every task into an island (many small islands)"},
+					},
+		default = false,
+	},
+    {
+		name = "island_size_setting",
+		label = "Size of Islands?",
+		hover = "If -Variate World- is enabled, what size should the islands have? (affects number of tasks per island. does not change vanilla islands)",
+		options =	{
+						{description = "MainSmall Same", data = "mainsmall_othersamesize", hover = "Mainland small (2 tasks) and rest is divided between rest of islands."},
+                        {description = "All Same Size", data = "allsamesize", hover = "All islands will be roughly the same size. (default)"},
+                        {description = "MainBig Small", data = "mainbig_othersmall", hover = "Islands will be a single task and rest tasks are added to mainland."},
+					},
+		default = "allsamesize",
+	},
+    {
+		name = "variate_suck",
+		label = "Variate annoying?",
+        hover = "If -Variate World- is enabled, also randomly set: wildfire, disease, frograin, deerclops, antlion and petrification.",
+		options =	{
+						{description = "No", data = false, hover = "Will use your set worldsetting instead."},
+                        {description = "Yes", data = true, hover = " "},
+					},
+		default = true,
+	},
+    {
+		name = "variate_specialevent",
+		label = "Variate Event?",
+		hover = "If -Variate World- is enabled, set here the chance that the next world will have one random special event",
+		options =	{
+						{description = "Disabled", data = 0, hover = "Will use your set worldsetting instead."},
+                        {description = "5%", data = 5, hover = " "},
+                        {description = "10%", data = 10, hover = " "},
+                        {description = "15%", data = 15, hover = " "},
+                        {description = "20%", data = 20, hover = " "},
+                        {description = "25%", data = 25, hover = " "},
+                        {description = "30%", data = 30, hover = " "},
+                        {description = "35%", data = 35, hover = " "},
+                        {description = "40%", data = 40, hover = " "},
+                        {description = "45%", data = 45, hover = " "},
+                        {description = "50%", data = 50, hover = " "},
+                        {description = "55%", data = 55, hover = " "},
+                        {description = "60%", data = 60, hover = " "},
+                        {description = "65%", data = 65, hover = " "},
+                        {description = "70%", data = 70, hover = " "},
+                        {description = "75%", data = 75, hover = " "},
+                        {description = "80%", data = 80, hover = " "},
+                        {description = "85%", data = 85, hover = " "},
+                        {description = "90%", data = 90, hover = " "},
+                        {description = "95%", data = 95, hover = " "},
+                        {description = "100%", data = 100, hover = " "},
+					},
+		default = 0,
 	},
     {
 		name = "DSlike",
@@ -100,7 +172,7 @@ configuration_options =
     {
 		name = "agesave",
 		label = "Save Days?",
-			hover = "Transfer -days survived- and beard and wx78 level?",
+			hover = "Transfer -days survived-? If enabled it makes the next world harder, because eg hound-waves check for this number.",
 		options =	{
 						{description = "No", data = false, hover = " "},
                         {description = "Yes", data = true, hover = " "},
@@ -123,14 +195,14 @@ configuration_options =
 			hover = "How much of your inventory should be transferred",
 		options =	{
 						{description = "Everything", data = "all", hover = "All items and also everything equipped."},
-                        {description = "1", data = 1, hover = "Only the first x items are transferred no equipped stuff"},
-                        {description = "2", data = 2, hover = "Only the first x items are transferred no equipped stuff"},
-                        {description = "3", data = 3, hover = "Only the first x items are transferred no equipped stuff"},
-                        {description = "4", data = 4, hover = "Only the first x items are transferred no equipped stuff"},
-                        {description = "5", data = 5, hover = "Only the first x items are transferred no equipped stuff"},
-                        {description = "6", data = 6, hover = "Only the first x items are transferred no equipped stuff"},
-                        {description = "7", data = 7, hover = "Only the first x items are transferred no equipped stuff"},
-                        {description = "8", data = 8, hover = "Only the first x items are transferred no equipped stuff"},
+                        {description = "1", data = 1, hover = "Only the first x items, no equipped stuff"},
+                        {description = "2", data = 2, hover = "Only the first x items, no equipped stuff"},
+                        {description = "3", data = 3, hover = "Only the first x items, no equipped stuff"},
+                        {description = "4", data = 4, hover = "Only the first x items, no equipped stuff"},
+                        {description = "5", data = 5, hover = "Only the first x items, no equipped stuff"},
+                        {description = "6", data = 6, hover = "Only the first x items, no equipped stuff"},
+                        {description = "7", data = 7, hover = "Only the first x items, no equipped stuff"},
+                        {description = "8", data = 8, hover = "Only the first x items, no equipped stuff"},
 					},
 		default = "all",
 	},
@@ -153,6 +225,16 @@ configuration_options =
                         {description = "Yes", data = true, hover = " "},
 					},
 		default = false,
+	},
+    {
+		name = "ALLsave",
+		label = "Save Everything else?",
+			hover = "Transfer all other data found on your character that was not mentioned yet. If this causes problems or crash, disable this setting.",
+		options =	{
+						{description = "No", data = false, hover = "Only data mentioned in earlier modsettings might be transfered."},
+                        {description = "Yes", data = true, hover = "Only works if you choose the same char in next world."},
+					},
+		default = true,
 	},
     {
 		name = "adv_itemcarrysandbox",
@@ -312,7 +394,7 @@ configuration_options =
         options =   {
                         {description = "IgnoreBarren", data = 1, hover = "Ignore Impassable and Barren, when placing."},
                         {description = "IgnoreAll", data = 2, hover = "Ignores also other setpieces, but it could be at the same location like other things."},
-                        {description = "IgBar+Req", data = 4, hover = "Same as IgnoreBarren, but wordl will generate again until all parts are placed."},
+                        {description = "IgBar+Req", data = 4, hover = "Same as IgnoreBarren, but world will generate again until all parts are placed."},
                         {description = "IgAll+Req", data = 5, hover = "Same as IgBar+Req but with IgnoreAll"}, -- usually IgnoreAll will be 100% gurantee, but not if modworldgenmain spawns them as story setpieces, which is only true for adventure mode
                     },
         default = 4,
@@ -340,5 +422,3 @@ configuration_options =
     },
 }
 
---Adds a priority to the mod. Loads it before or after other mods. This can help to fix various incompatibilities between other mods.
-priority = 8888

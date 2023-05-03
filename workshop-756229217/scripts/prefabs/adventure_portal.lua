@@ -34,7 +34,9 @@ local function OnStartAdventure(inst,carrystuff)
 				inst.SoundEmitter:KillSound("talk")
 				inst.SoundEmitter:PlaySound("dontstarve/common/teleportato/teleportato_maxwelllaugh", "teleportato_laugh")
 				for k, v in pairs(AllPlayers) do
-					v.sg:GoToState("teleportato_teleport")
+					if v.components.health and not v.components.health:IsDead() then
+                        v.sg:GoToState("teleportato_teleport")
+                    end
 				end
 				TheWorld:DoTaskInTime(5, JumpToAdventure,carrystuff)
 			else

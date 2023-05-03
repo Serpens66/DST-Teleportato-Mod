@@ -6,6 +6,33 @@
 -- teleportato_ring
 
 
+--[[
+-- ##################
+-- example usage of saving and loading data from other mods when worldjumping/after worldjumping with teleportato
+-- ##################
+local functionsavewithteleportato = _G.TUNING.TELEPORTATOMOD.functionsavewithteleportato
+_G.TUNING.TELEPORTATOMOD.functionsavewithteleportato = function(player) -- called for server
+    local mods_data = {}
+    if functionsavewithteleportato~=nil then -- call a previous funtion from another mod, if there is one
+        mods_data = functionsavewithteleportato(player)
+    end
+    mods_data["myuniquemodname"] = player.components.mycomponent:OnSave() -- you can use onsave, or use other values from your mod, to save them
+    return mods_data
+end
+
+AddPlayerPostInit(function(player)
+    player:ListenForEvent("teleportatojumpLoadData", function(player,mods_data)
+        if mods_data~=nil and mods_data["myuniquemodname"]~=nil and GetModConfigData("teleportatosavemymod") then -- you can add a modsetting if sth should be loaded or not
+            player.components.mycomponent:OnLoad(mods_data["myuniquemodname"])
+        end
+    end)
+end)
+-- ##################
+-- ##################
+--]]
+
+
+
 -- print("HIER ist modmain")
 
 local _G = GLOBAL
@@ -23,8 +50,6 @@ local function IsLEVELINFOLOADED()
     return _G.TUNING.TELEPORTATOMOD.LEVELINFOLOADED
 end
 
-modimport("scripts/tele_itemskinsave") -- save the skins for items for worldjump
-
 _G.TUNING.TELEPORTATOMOD.IsWorldWithTeleportato = function() -- as soon LEVELINFOLOADED is true, you can use this
     if _G.TUNING.TELEPORTATOMOD.WorldWithTeleportato==nil then
         return nil
@@ -33,6 +58,10 @@ _G.TUNING.TELEPORTATOMOD.IsWorldWithTeleportato = function() -- as soon LEVELINF
     end
     return false
 end
+
+-- to other modders: you can add stuff to these 2 lists, so they wont be loaded in new world after worldjump. Eg. to prevent bugs
+TUNING.TELEPORTATOMOD.DoNotLoadPlayerData = {walter="woby"} -- a table with prefab playercharacter and string names of data (the one used in OnLoad), eg. data.woby for walter. We don't want to save/load woby, because we need to spawn him at next world from new. other mods might add stuff to this table
+TUNING.TELEPORTATOMOD.DoNotLoadComponentData = {"adv_startstuff","touchstonetracker"} -- a table with string names of components we dont want to load for players after worldjumping, eg. adv_startstuff: teleportato mod includes things that should be executed once per world, so we dont want to load this. other mods might add stuff to this table
 
 local TheNet = GLOBAL.TheNet
 local SERVER_SIDE, DEDICATED_SIDE, CLIENT_SIDE, ONLY_CLIENT_SIDE
@@ -49,11 +78,10 @@ elseif TheNet:GetIsClient() then
 	ONLY_CLIENT_SIDE = true
 end
 
-
 local enabledmods = {}
-for _,modname in pairs(_G.TheNet:GetIsServer() and _G.ModManager:GetEnabledServerModNames() or _G.TheNet:GetServerModNames()) do
-    enabledmods[_G.KnownModIndex:GetModFancyName(modname)] = true
-    -- print("found enabled mod "..modname.." == "..tostring(_G.KnownModIndex:GetModFancyName(modname)))
+for _,name in pairs(_G.TheNet:GetIsServer() and _G.ModManager:GetEnabledServerModNames() or _G.TheNet:GetServerModNames()) do
+    enabledmods[_G.KnownModIndex:GetModFancyName(name)] = true
+    -- print("found enabled mod "..name.." == "..tostring(_G.KnownModIndex:GetModFancyName(name)))
 end
 -- print(enabledmods["[API] Gem Core"])
 _G.TUNING.TELEPORTATOMOD.GEMAPIActive = enabledmods["[API] Gem Core"]
@@ -140,6 +168,44 @@ _G.TUNING.TELEPORTATOMOD.recipesave = _G.TUNING.TELEPORTATOMOD.recipesave~=nil a
 _G.TUNING.TELEPORTATOMOD.DSlike = _G.TUNING.TELEPORTATOMOD.DSlike~=nil and _G.TUNING.TELEPORTATOMOD.DSlike or GetModConfigData("DSlike")
 _G.TUNING.TELEPORTATOMOD.statssave = _G.TUNING.TELEPORTATOMOD.statssave~=nil and _G.TUNING.TELEPORTATOMOD.statssave or GetModConfigData("statssave") -- health sanity, hunger
 _G.TUNING.TELEPORTATOMOD.announcepickparts = _G.TUNING.TELEPORTATOMOD.announcepickparts~=nil and _G.TUNING.TELEPORTATOMOD.announcepickparts or GetModConfigData("announcepickparts")
+_G.TUNING.TELEPORTATOMOD.ALLsave = _G.TUNING.TELEPORTATOMOD.ALLsave~=nil and _G.TUNING.TELEPORTATOMOD.ALLsave or GetModConfigData("ALLsave") -- save and load all chracter related data when worldjumping. This might be dangerous for mod characters or other special cases, so be able to disable this
+
+local setting_variate_islands = GetModConfigData("variate_islands")
+local setting_do_variate_world = GetModConfigData("variateworld")
+
+modimport("scripts/tele_itemskinsave") -- save the skins for items for worldjump
+
+
+local function RemoveEnemiesNearSpawn(world,range1,range2)
+    world:DoTaskInTime(0,function() -- do the following after everything is finally done
+        if range1==nil then
+            range1=60
+        end
+        if range2==nil then
+            range2=30
+        end
+        -- remove close enemies to startposition to prevent insta death (and later spawn some helpful stuff depending on map and difficulty)
+        local removenearprefabs = {"walrus_camp","pigtorch","spiderden","houndmound","mermhouse","wasphive","tallbirdnest"} -- prevent instant death near spawnpoint
+        local x,y,z = world.components.playerspawner.GetAnySpawnPoint() -- we only have one starting position (if 0,0,0, then no point is registered yet, this is why the code must be in DoTaskInTime )
+        local nearenemies = _G.TheSim:FindEntities(x, y, z, range1, nil, {"event_trigger", "INLIMBO", "NOCLICK", "FX", "DECOR"}, nil)
+        for _,enemy in pairs(nearenemies) do
+            if enemy~=nil and enemy:IsValid() then
+                if table.contains(removenearprefabs,enemy.prefab) or enemy:HasTag("hostile") or enemy:HasTag("walrus") or enemy:HasTag("tallbird") or (enemy:HasTag("guard") and enemy:HasTag("pig")) then
+                    if enemy.prefab~="walrus_camp" and not enemy:HasTag("walrus") and not enemy:HasTag("hound") then
+                        local distsq = enemy:GetDistanceSqToPoint(x, y, z)
+                        if distsq < range2*range2 then -- range of range2 for everything except walrus_camp
+                            print("TeleportatoMod: Remove danger near spawn: "..tostring(enemy.prefab))
+                            enemy:Remove()
+                        end
+                    else -- range of range1 (FindEntities) for walrus_camp/walrus/their hounds, cause the walrus has a huge player search range (40)
+                        print("TeleportatoMod: Remove danger near spawn: "..tostring(enemy.prefab))
+                        enemy:Remove()
+                    end
+                end
+            end 
+        end
+    end)
+end
 
 
 local function DoStartStuff(world) -- könnte man evtl mit prefabpostinit world und POPULATING machen, damts nur einmal beim erstellen der welt gemacht wird?
@@ -156,6 +222,37 @@ local function DoStartStuff(world) -- könnte man evtl mit prefabpostinit world 
     if _G.TUNING.TELEPORTATOMOD.functionpostloadworldONCE~=nil then -- eg to spawn some grass/rocks or so at the starting postion
         _G.TUNING.TELEPORTATOMOD.functionpostloadworldONCE(world)
     end
+    
+    RemoveEnemiesNearSpawn(world,60,30)
+    
+end
+
+local function DoStartStuff_noAdv(world)
+    if setting_variate_islands and world.topology.overrides.terrariumchest~="never" then -- then we removed the terrariumchest from required_prefabs to not fail worldgeneration that often and we should place it randomly with this mod instead
+        portal = nil
+        terrariumchest = nil
+        for k,v in pairs(_G.Ents) do
+            if (v.prefab == "spawnpoint_master") then
+                portal = v
+            elseif (v.prefab == "terrariumchest") then
+                terrariumchest = v
+                break -- if we find this, we dont need the portal. if we find the portal first, we need to iterate through everything to be sure tif there is a chest
+            end
+        end
+        
+        if terrariumchest==nil and portal~=nil then
+            print("Teleportato: Try to spawn missing terrariumchest")
+            local spawn = nil
+            spawn = helpers.SpawnPrefabAtLandPlotNearInst("terrariumchest",portal,1000,0,1000,nil,150,150)
+            if spawn==nil then
+                print("Teleportato: ERROR failed to spawn missing terrariumchest")
+            else
+                helpers.AddScenario(spawn,"chest_terrarium")
+            end
+        end
+    end
+    
+    RemoveEnemiesNearSpawn(world,50,20) -- with teleportato only we are not "stunned" by maxwell, so the range can be a bit smaller compared to adventure
     
 end
 
@@ -180,6 +277,8 @@ local function LoadLevelAndDoStuff(world)
         end
         _G.TUNING.TELEPORTATOMOD.WorldWithTeleportato = stri -- "", "forest", "cave" or "forestcave"
         -- we could also save/load this within the world.... 
+    else -- no adventure mode
+        world.components.adv_startstuff:DoStartStuffNow(DoStartStuff_noAdv,"DoStartStuff_noAdv")
     end
     
     world:DoTaskInTime(3,function(world) -- check if we have all parts
@@ -226,7 +325,7 @@ local function LoadLevelAndDoStuff(world)
                 end
             end
         end
-        if _G.next(WORLDS) and world.ismastershard and _G.TUNING.TELEPORTATOMOD.WORLDS[_G.TUNING.TELEPORTATOMOD.LEVEL].name=="Maxwells Door" then -- check if adventure portal was placed
+        if _G.next(WORLDS) and world.ismastershard and _G.TUNING.TELEPORTATOMOD.WORLDS[_G.TUNING.TELEPORTATOMOD.LEVEL].name=="Maxwells Door" then -- check if adventure portal was placed, eg because setpiece placement failed.
             local advportal = _G.TheSim:FindFirstEntityWithTag("adventure_portal")
             if advportal==nil then
                 portal = nil
@@ -290,9 +389,8 @@ end
 
 
 -- divining Rod recipe
-local Recipe = _G.Recipe
-local diviningrod = AddRecipe("diviningrod", {Ingredient("twigs", 1), Ingredient("nightmarefuel", 4), Ingredient("gears", 1)}, _G.RECIPETABS.SCIENCE, _G.TECH.SCIENCE_TWO)
-
+local diviningrod = AddRecipe2("diviningrod", {Ingredient("twigs", 1), Ingredient("nightmarefuel", 4), Ingredient("gears", 1)}, _G.TECH.NONE) -- SCIENCE_TWO does not work for whatever reason?!
+AddRecipeToFilter("diviningrod","MAGIC")
 
 
 
@@ -328,7 +426,7 @@ local function TitleStufff(inst) -- inst is player
             title = WORLDS[level].name
             subtitle = "Prologue"
         end
-        print("HIER TITLESTUFF funktion chapter: "..tostring(chapter).."title: "..tostring(title).." subtitle: "..tostring(subtitle))
+        -- print("HIER TITLESTUFF funktion chapter: "..tostring(chapter).."title: "..tostring(title).." subtitle: "..tostring(subtitle))
         _G.TheFrontEnd:ShowTitle(title,subtitle)
         
         -- following does not work so well, sometimes works, sometimes not, so we simply remove it
@@ -341,7 +439,7 @@ end
 
 
 local function StartItems(inst)
-    print("HIER startitems LEVEL: "..tostring(_G.TUNING.TELEPORTATOMOD.LEVEL).." CHAPTER: "..tostring(_G.TUNING.TELEPORTATOMOD.CHAPTER))
+    -- print("HIER startitems LEVEL: "..tostring(_G.TUNING.TELEPORTATOMOD.LEVEL).." CHAPTER: "..tostring(_G.TUNING.TELEPORTATOMOD.CHAPTER))
     if SERVER_SIDE and _G.TheWorld.ismastershard then
         -- print("mynetvarTitleStufff:set")
         inst.mynetvarTitleStufff:set(1) -- send info to clients, to show the game title at game start
@@ -365,7 +463,7 @@ local function OnDirtyEventTitleStufff(inst) -- this is called on client, if the
 end
 
 local function DoPlayerStuffAfterLevelLoaded(inst)
-    print("DoPlayerStuffAfterLevelLoaded")
+    -- print("DoPlayerStuffAfterLevelLoaded")
     if SERVER_SIDE and inst.mynetvarLEVELINFOLOADED:value()==false then
         inst.mynetvarLEVELINFOLOADED:set(_G.TUNING.TELEPORTATOMOD.LEVELINFOLOADED) -- now it is 100% true
     end
@@ -382,7 +480,7 @@ end
 
 
 local function OnPlayerPostInit(inst) -- called for server and client
-    print("OnPlayerPostInit")
+    -- print("OnPlayerPostInit")
     
     inst.mynetvarLEVELINFOLOADED = _G.net_bool(inst.GUID, "LEVELINFOLOADEDNetStuff", "DirtyEventLEVELINFOLOADED") -- true or false
     inst.mynetvarLEVELINFOLOADED:set(false) -- set a default value
@@ -482,7 +580,7 @@ local function DoTheWorldJump(inst,doer) -- inst has to be the teleportato_base
         _G.TheNet:Announce("Worldjump!")
         inst:DoTaskInTime(4, function() inst.AnimState:PlayAnimation("laugh", false) ; inst.AnimState:PushAnimation("active_idle", true) ; inst.SoundEmitter:PlaySound("dontstarve/common/teleportato/teleportato_maxwelllaugh", "teleportato_laugh") end)
         _G.TheWorld:DoTaskInTime(6.46, function(world) _G.TheFrontEnd:Fade(false,1) end)
-        _G.TheWorld:DoTaskInTime(2.11, function(world) for k,v in pairs(_G.AllPlayers) do v.sg:GoToState("teleportato_teleport") end end)
+        _G.TheWorld:DoTaskInTime(2.11, function(world) for k,v in pairs(_G.AllPlayers) do if v.components.health and not v.components.health:IsDead() then v.sg:GoToState("teleportato_teleport") end end end)
         _G.TheWorld:DoTaskInTime(8, function(world)
             if SERVER_SIDE and world.ismastershard then
                 if _G.next(WORLDS) then -- if another mod wants us to load a specific world
@@ -519,7 +617,7 @@ local function RecognizeTelePart(world,inst) -- call this only once for every pa
                 -- print("RecognizeTelePart set position for "..tostring(inst.prefab).." to "..tostring(world.components.adv_startstuff.partpositions[inst.prefab]))
             end
             -- print(_G.GetTableSize(world.components.adv_startstuff.partpositions))
-            if _G.GetTableSize(world.components.adv_startstuff.partpositions)==5 and not _G.TUNING.TELEPORTATOMOD.DSlike then -- if the last part was added, spawn the eneimies around them
+            if (_G.GetTableSize(world.components.adv_startstuff.partpositions)==5 or (_G.GetTableSize(world.components.adv_startstuff.partpositions)==4 and not world.ismastershard)) and not _G.TUNING.TELEPORTATOMOD.DSlike then -- if the last part was added, spawn the eneimies around them
                 -- print("call SpawnEnemies")
                 helpers.SpawnEnemies(inst,world) -- some enemies at start of the game at the part positions
             end
@@ -612,7 +710,7 @@ local function TeleportatoPostInit(inst)
             if not inst.completed and not inst.activatedonce then -- if it was completed the first time... and a check if it was already activated to don't break savegames were it is already active
                 if giver and giver.components and giver.components.talker then
                     giver.components.talker:ShutUp()
-                    giver.components.talker:Say(_G.GetString(doer, "ANNOUNCE_TRAP_WENT_OFF"))
+                    giver.components.talker:Say(_G.GetString(giver, "ANNOUNCE_TRAP_WENT_OFF"))
                 end
                 if _G.TUNING.TELEPORTATOMOD.Enemies > 0 and not _G.TUNING.TELEPORTATOMOD.DSlike then
                     _G.TheNet:Announce("Teleportato Completed! Did you hear that?!")
@@ -633,11 +731,35 @@ local function TeleportatoPostInit(inst)
 end
 AddPrefabPostInit("teleportato_base", TeleportatoPostInit) 
 
+--[[
+local WSO = require("worldsettings_overrides")
+AddSimPostInit(function(dummy)
+    if SERVER_SIDE then -- just to make it more clear that everything is server
+        if _G.TheWorld~=nil and _G.TheWorld.components~=nil and _G.TheWorld.components.adv_startstuff~=nil and not _G.TheWorld.components.adv_startstuff.done["AdjustWorldSettings"] then -- only change it once (after the world loaded first)
+            -- save our chosen overrides (settings and worldgen) after first world generation in the savegame/world, so it is also displayed on the settings screen (and not reverted)
+            -- INFO: does not work, because TASKSETDATA_OVERRIDES is only saved in modworldgenmain when the WSO code is executed, not on AddLevelP. So all we could save here in topology are the worldsettings, while this also works in savedata when overwriting WSO in modworldgenmain
+            print("_G.TUNING.TELEPORTATOMOD.TASKSETDATA_OVERRIDES:")
+            _G.dumptable(_G.TUNING.TELEPORTATOMOD.TASKSETDATA_OVERRIDES)
+            if _G.TUNING.TELEPORTATOMOD.TASKSETDATA_OVERRIDES[_G.TheWorld.prefab]~=nil and _G.TUNING.TELEPORTATOMOD.TASKSETDATA_OVERRIDES[_G.TheWorld.prefab].overrides~=nil then
+                for name,setting in pairs(_G.TUNING.TELEPORTATOMOD.TASKSETDATA_OVERRIDES[_G.TheWorld.prefab].overrides) do
+                    _G.TheWorld.topology.overrides[name] = setting
+                end
+            end
+        
+            _G.TheWorld.components.adv_startstuff.done["AdjustWorldSettings"] = true -- SimPostInit runs after the worldsettings where applied, so we change it here, not in postinit of world. worldsettings are changed in modworldgenmain
+        end
+        
+        
+    end
+end)
+--]]
+
 
 
 AddPrefabPostInit("world", function(world) -- prefabpostinits are never called for clients
     
     if SERVER_SIDE then -- just to make it more clear that everything is server
+        
         -- print("worldpostinit")
         world:DoTaskInTime(0,function() LoadLevelAndDoStuff(world) end)
         
@@ -648,6 +770,7 @@ AddPrefabPostInit("world", function(world) -- prefabpostinits are never called f
             world:AddComponent("adventurejump") -- better add this after worldjump, cause the jump itself uses worldjump
         end
         world:AddComponent("adv_startstuff") -- aldo add this to client
+
 
         world:ListenForEvent("ms_playerdespawnandmigrate", function(world,data)
             -- data = { player = doer, portalid = self.id, worldid = self.linkedWorld }

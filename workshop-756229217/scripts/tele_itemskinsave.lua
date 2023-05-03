@@ -26,7 +26,7 @@ AddPrefabPostInitAny(function(inst)
     end
 end)
 
--- if the devs are changing these functions, we have to adjust them accoridingly. they are mostly a copy, except for the thecreatorbuilder part
+-- if the devs are changing SpawnSaveRecord, we have to adjust it accoridingly (mainfunctions.lua). they are mostly a copy, except for the thecreatorbuilder part
 
 local _SpawnSaveRecord = _G.SpawnSaveRecord
 _G.SpawnSaveRecord = function(saved, newents,...)
@@ -78,45 +78,10 @@ AddGlobalClassPostConstruct("entityscript", "EntityScript", function(self)
         if self.thecreatorbuilder==nil or self.skinname==nil then
             return _GetSaveRecord(self,...)
         else
-            -- print(string.format("~GetSaveRecord [%s]", tostring(self.prefab) ))
-            local record = {}
-            if self.entity:HasTag("player") then
-                record = {
-                    prefab = self.prefab,
-                    age = self.Network:GetPlayerAge()
-                } 
-            else
-                record = {
-                    prefab = self.prefab,
-                }   
-            end
-            if self.Transform then
-                local x, y, z = self.Transform:GetWorldPosition()
-                --Qnan hunting
-                x = x ~= x and 0 or x
-                y = y ~= y and 0 or y
-                z = z ~= z and 0 or z
-                record.x = x and math.floor(x*1000)/1000 or 0
-                record.z = z and math.floor(z*1000)/1000 or 0
-                --y is often 0 in our game, so be selective.
-                if y ~= 0 then
-                    record.y = y and math.floor(y*1000)/1000 or 0
-                end
-            end
-            if self.skinname then 
-                record.skinname = self.skinname
-            end
-            if self.skin_id then 
-                record.skin_id = self.skin_id
-            end
-            if self.alt_skin_ids then
-                record.alt_skin_ids = self.alt_skin_ids
-            end
+            local record, references = _GetSaveRecord(self,...) -- I think no need here to copy paste the code
             if self.thecreatorbuilder then
                 record.thecreatorbuilder = self.thecreatorbuilder
             end
-            local references = nil
-            record.data, references = self:GetPersistData()
             return record, references
         end
     end

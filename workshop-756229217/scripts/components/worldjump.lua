@@ -21,49 +21,114 @@ local function OnPlayerSpawn(world, player)
                 -- print("WERT playerspawned")
                 if jumpdata then
                     -- print("WERT playerspawned jumpdata")
-                    if worldjump.saveage then
-                        player.components.age:OnLoad(jumpdata.age_data)
-                        if player.components.beard and jumpdata.beard_data and GetTableSize(player.components.beard.callbacks) > 0 then -- added by serp
-                            player.components.beard:OnLoad(jumpdata.beard_data)
-                        end
-                        if player.prefab=="wx78" then -- level
-                            player:OnPreLoad(jumpdata.level_data)
-                        end
+                    if jumpdata.chardata~=nil then
+                        jumpdata.chardata.is_ghost = false -- no ghosts, revieve everyone
                     end
-                    if worldjump.saveinventory then
-                        if TUNING.TELEPORTATOMOD.ITEMNUMBERTRANS~="all" then -- defined in modmain, only transfer a number of items
-                            local transitems = {}
-                            for i=1,TUNING.TELEPORTATOMOD.ITEMNUMBERTRANS do
-                                table.insert(transitems,jumpdata.inventory_data.items[i])
+                    if TUNING.TELEPORTATOMOD.ALLsave and player.prefab==jumpdata.prefab and jumpdata.chardata~=nil then -- load character prefab specific stuff if it is the same character (because otherwise it might crash because of bad game code in some OnLoad)
+                        -- ALLsave stands for "load everything character related that is not otherwise mentioned in settings"
+                        -- most of the time this should be fine, but there may be mechanics that do not work as intended if everything is loaded in another world, so we added an extra modsetting ALLsave for it
+                        
+                        for pl_prefab,dataname in pairs(TUNING.TELEPORTATOMOD.DoNotLoadPlayerData) do
+                            if player.prefab == pl_prefab and jumpdata.chardata[dataname]~=nil then
+                                jumpdata.chardata[dataname] = nil -- set it to nil before we call OnPreLoad and OnLoad because stuff into this table should not be loaded, eg. because it causes bugs
                             end
-                            jumpdata.inventory_data.items = transitems
-                            jumpdata.inventory_data.equip = {} -- delete quipped items
                         end
-                        player.components.inventory.ignoresound = true -- no sound when giving them to player
-                        player.components.inventory:OnLoad(jumpdata.inventory_data, jumpdata.inventory_references)
-                        player.components.inventory.ignoresound = false
-                        -- print("HIER inventory_data and reference: "..tostring(jumpdata.inventory_data).." , "..tostring(jumpdata.inventory_references))
-                    -- else
-                        -- print("HIER, saveinventory: "..tostring(saveinventory))
-                    end
-                    if worldjump.savebuilder then
-                        player.components.builder:OnLoad(jumpdata.builder_data) -- added by serp
-                    end
-                    if TUNING.TELEPORTATOMOD.repickcharacter==false and jumpdata.prefab == player.prefab and jumpdata.skin_data then -- load skin, if forceload char and we have the same character selected again
-                        player.components.skinner:OnLoad(jumpdata.skin_data)
-                    end
-                    if TUNING.TELEPORTATOMOD.statssave and jumpdata.stats_data~=nil then
-                        if jumpdata.stats_data["health"]~=nil and player.components.health then
-                            player.components.health:SetPercent(jumpdata.stats_data["health"])
+                        
+                        if player.OnPreLoad~=nil then
+                            player:OnPreLoad(jumpdata.chardata) -- for whatever reason although the function requires "inst,data", inst is automatcally transfered, so we only need to pass data
                         end
-                        if jumpdata.stats_data["sanity"]~=nil and player.components.sanity then
-                            player.components.sanity:SetPercent(jumpdata.stats_data["sanity"])
+                        if player.OnLoad~=nil then
+                            player:OnLoad(jumpdata.chardata) -- for whatever reason although the function requires "inst,data", inst is automatcally transfered, so we only need to pass data
                         end
-                        if jumpdata.stats_data["hunger"]~=nil and player.components.hunger then
-                            player.components.hunger:SetPercent(jumpdata.stats_data["hunger"])
-                        end                        
+                        for dataname,data in pairs(jumpdata.chardata) do -- load all components data automatically
+                            if data~=nil and player.components[dataname]~=nil and player.components[dataname].OnLoad~=nil then
+                                if (dataname~="age" or worldjump.saveage) and
+                                    (dataname~="skinner" or TUNING.TELEPORTATOMOD.repickcharacter==false) and
+                                    ((dataname~="builder" and dataname~="knownfoods") or worldjump.savebuilder) and
+                                    ((dataname~="health" and dataname~="sanity" and dataname~="hunger") or TUNING.TELEPORTATOMOD.statssave) and
+                                    (dataname~="inventory" or worldjump.saveinventory) and
+                                    not table.contains(TUNING.TELEPORTATOMOD.DoNotLoadComponentData,dataname) then -- eg. adv_startstuff: teleportato mod includes things that should be executed once per world, so we dont want to load this
+                                    -- will also load stuff like beard, upgrademoduleowner and other char related stuff, but only if it is the same prefab like before
+                                    if dataname=="inventory" then
+                                        if TUNING.TELEPORTATOMOD.ITEMNUMBERTRANS~="all" then -- defined in modmain, only transfer a number of items
+                                            local transitems = {}
+                                            for i=1,TUNING.TELEPORTATOMOD.ITEMNUMBERTRANS do
+                                                table.insert(transitems,data.items[i])
+                                            end
+                                            data.items = transitems
+                                            data.equip = {} -- delete quipped items
+                                        end
+                                    end
+                                    player.components[dataname]:OnLoad(data)
+                                end
+                            end
+                        end
+                        player.components.health:ForceUpdateHUD(true) -- update HUD after all those changes
+                    else -- load the components manually, because we dont want to transfer everything to the new character
+                        if jumpdata.chardata~=nil then
+                            if worldjump.saveage then
+                                player.components.age:OnLoad(jumpdata.chardata.age)
+                            end
+                            if worldjump.savebuilder then
+                                player.components.builder:OnLoad(jumpdata.chardata.builder)
+                            end
+                            
+                            if worldjump.saveinventory then -- inventory extra code, to only transfer a set amount of stuff
+                                if TUNING.TELEPORTATOMOD.ITEMNUMBERTRANS~="all" then -- defined in modmain, only transfer a number of items
+                                    local transitems = {}
+                                    for i=1,TUNING.TELEPORTATOMOD.ITEMNUMBERTRANS do
+                                        table.insert(transitems,jumpdata.chardata.inventory.items[i])
+                                    end
+                                    jumpdata.chardata.inventory.items = transitems
+                                    jumpdata.chardata.inventory.equip = {} -- delete quipped items
+                                end
+                                player.components.inventory.ignoresound = true -- no sound when giving them to player
+                                player.components.inventory:OnLoad(jumpdata.chardata.inventory)
+                                player.components.inventory.ignoresound = false
+                            end
+                            
+                        else -- compatibilty code for older savegames we did not save chardata yet...
+                            if worldjump.saveage then
+                                player.components.age:OnLoad(jumpdata.age_data)
+                            end
+                            if worldjump.savebuilder then
+                                player.components.builder:OnLoad(jumpdata.builder_data)
+                            end
+                            
+                            if TUNING.TELEPORTATOMOD.repickcharacter==false and jumpdata.prefab == player.prefab and jumpdata.skin_data then -- load skin, if forceload char and we have the same character selected again
+                                player.components.skinner:OnLoad(jumpdata.skin_data)
+                            end
+                            
+                            if worldjump.saveinventory then -- inventory extra code, to only transfer a set amount of stuff
+                                if TUNING.TELEPORTATOMOD.ITEMNUMBERTRANS~="all" then -- defined in modmain, only transfer a number of items
+                                    local transitems = {}
+                                    for i=1,TUNING.TELEPORTATOMOD.ITEMNUMBERTRANS do
+                                        table.insert(transitems,jumpdata.inventory_data.items[i])
+                                    end
+                                    jumpdata.inventory_data.items = transitems
+                                    jumpdata.inventory_data.equip = {} -- delete quipped items
+                                end
+                                player.components.inventory.ignoresound = true -- no sound when giving them to player
+                                player.components.inventory:OnLoad(jumpdata.inventory_data, jumpdata.inventory_references)
+                                player.components.inventory.ignoresound = false
+                            end
+                        end
+                        
+                        if TUNING.TELEPORTATOMOD.statssave and jumpdata.stats_data~=nil then
+                            if jumpdata.stats_data["health"]~=nil and player.components.health then
+                                player.components.health:SetPercent(jumpdata.stats_data["health"])
+                            end
+                            if jumpdata.stats_data["sanity"]~=nil and player.components.sanity then
+                                player.components.sanity:SetPercent(jumpdata.stats_data["sanity"])
+                            end
+                            if jumpdata.stats_data["hunger"]~=nil and player.components.hunger then
+                                player.components.hunger:SetPercent(jumpdata.stats_data["hunger"])
+                            end                        
+                        end
+                        
                     end
                     table.insert(t, userid)
+                    player:PushEvent("teleportatojumpLoadData",jumpdata.mods_data) -- push an event, so eg other mods can use this data too
                 end
             end
         end)
@@ -134,38 +199,34 @@ end
 function WorldJump:SavePlayerData(pl)	
     -- print("SavePlayerData")
     local stuff = {}
-    local age_data = nil
     local inventory_data, inventory_references = nil,nil
-    local builder_data = nil
-    local beard_data = nil
     local skin_data = nil
     local stats_data = {}
+    local mods_data = {}
     local healthpercent = nil
     local sanitypercent = nil
     local hungerpercent = nil
     if pl and pl:HasTag("player") then -- only save for one specific player, eg when he leaves
-        age_data = pl.components.age:OnSave()
         pl.components.inventory:DropEverythingWithTag("irreplaceable")
-        inventory_data, inventory_references = pl.components.inventory:OnSave()
-        stuff.age_data = age_data
-        stuff.inventory_data = inventory_data
-        stuff.inventory_references = inventory_references
-        if pl.prefab=="wx78" then
-            stuff.level_data = {level=pl.level > 0 and pl.level or nil}
+        -- inventory_data, inventory_references = pl.components.inventory:OnSave()
+        -- stuff.inventory_data = inventory_data
+        -- stuff.inventory_references = inventory_references
+        if pl.OnSave~=nil then
+            local record = pl:GetSaveRecord() -- refs are empty anyway (at least for wx78, refs from components are not saved, but also not needed?)
+            if record then
+                stuff.chardata = record.data
+            end
+        end
+        if pl.components.upgrademoduleowner then
+            stuff.upgrademoduleowner_data,stuff.upgrademoduleowner_refs = pl.components.upgrademoduleowner:OnSave()
         end
         -- print("HIER inventory_data and reference: "..tostring(inventory_data).." , "..tostring(inventory_references).." from "..tostring(pl))
         -- for k,v in pairs(inventory_data.items) do
             -- print(tostring(k).." , "..tostring(v))
         -- end
-        builder_data = pl.components.builder:OnSave()-- added by serp
-        stuff.builder_data = builder_data
-        beard_data = pl.components.beard and pl.components.beard:OnSave() or nil-- added by serp
-        stuff.beard_data = beard_data
         stuff.timefromsave = GetTime()
         stuff.prefab = pl.prefab -- save also the prefab, so we can force load the same character after worldjump (within modmain)
         self.player_data_save[pl.userid] = stuff -- save or overload the stuff of this player
-        skin_data = pl.components.skinner:OnSave()-- added by serp
-        stuff.skin_data = skin_data
         healthpercent = pl.components.health and pl.components.health:GetPercent() or 1
         sanitypercent = pl.components.sanity and pl.components.sanity:GetPercent() or 1
         hungerpercent = pl.components.hunger and pl.components.hunger:GetPercent() or 1
@@ -173,30 +234,31 @@ function WorldJump:SavePlayerData(pl)
         stats_data["sanity"] = sanitypercent>0.3 and sanitypercent or 0.3
         stats_data["hunger"] = hungerpercent>0.4 and hungerpercent or 0.4
         stuff.stats_data = stats_data
+        if TUNING.TELEPORTATOMOD.functionsavewithteleportato~=nil then
+            mods_data = TUNING.TELEPORTATOMOD.functionsavewithteleportato(pl)
+        end -- otherwise empty list
+        stuff.mods_data = mods_data
     else -- in case of worldjump
         -- print("SavePlayerData worldjump")
         for k, v in pairs(AllPlayers) do -- all players that are online and in overworld
             print("SavePlayerData save data for "..tostring(v))
             stuff = {}
-            if v.prefab=="wx78" then
-                stuff.level_data = {level=v.level > 0 and v.level or nil}
+            local record = v:GetSaveRecord() -- refs are empty anyway (at least for wx78, refs from components are not saved, but also not needed?)
+            if record then
+                stuff.chardata = record.data
             end
-            age_data = v.components.age:OnSave()
+            
+            if v.components.upgrademoduleowner then
+                stuff.upgrademoduleowner_data,stuff.upgrademoduleowner_refs = v.components.upgrademoduleowner:OnSave()
+            end
             v.components.inventory:DropEverythingWithTag("irreplaceable")
-            inventory_data, inventory_references = v.components.inventory:OnSave()
-            stuff.age_data = age_data
-            stuff.inventory_data = inventory_data
-            stuff.inventory_references = inventory_references
+            -- inventory_data, inventory_references = v.components.inventory:OnSave()
+            -- stuff.inventory_data = inventory_data
+            -- stuff.inventory_references = inventory_references
             -- print("HIER worldjump inventory_data and reference: "..tostring(inventory_data).." , "..tostring(inventory_references).." from "..tostring(v))
-            builder_data = v.components.builder:OnSave()-- added by serp
-            stuff.builder_data = builder_data
-            beard_data = v.components.beard and v.components.beard:OnSave() or nil-- added by serp
-            stuff.beard_data = beard_data
             stuff.timefromsave = GetTime()
             stuff.prefab = v.prefab -- save also the prefab, so we can force load the same character after worldjump (within modmain)
             self.player_data_save[v.userid] = stuff
-            skin_data = v.components.skinner:OnSave()-- added by serp
-            stuff.skin_data = skin_data
             healthpercent = v.components.health and v.components.health:GetPercent() or 1
             sanitypercent = v.components.sanity and v.components.sanity:GetPercent() or 1
             hungerpercent = v.components.hunger and v.components.hunger:GetPercent() or 1
@@ -204,6 +266,10 @@ function WorldJump:SavePlayerData(pl)
             stats_data["sanity"] = sanitypercent>0.3 and sanitypercent or 0.3
             stats_data["hunger"] = hungerpercent>0.4 and hungerpercent or 0.4
             stuff.stats_data = stats_data
+            if TUNING.TELEPORTATOMOD.functionsavewithteleportato~=nil then
+                mods_data = TUNING.TELEPORTATOMOD.functionsavewithteleportato(v)
+            end -- otherwise empty list
+            stuff.mods_data = mods_data
         end
         self.player_data_save.saveinventory = self.saveinventory
         self.player_data_save.savebuilder = self.savebuilder
