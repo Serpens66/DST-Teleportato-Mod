@@ -1,6 +1,9 @@
 local BigPopupDialogScreen = require "screens/bigpopupdialog"
 
-local assets = {Asset("ANIM", "anim/portal_adventure.zip"), Asset("MINIMAP_IMAGE", "portal")}
+local assets = {
+	Asset("ANIM", "anim/portal_adventure.zip"),
+	Asset("MINIMAP_IMAGE", "portal"),
+}
 
 local function GetVerb()
     return STRINGS.ACTIONS.ACTIVATE.GENERIC
@@ -21,13 +24,13 @@ local function OnStartAdventure(inst, carrystuff)
         local dist_sq = 30 * 30
         for k, v in pairs(AllPlayers) do
             if not v:IsNear(inst, 10) then
-                inst.components.talker:Say(STRINGS.PLAYERS_TOO_FAR_AWAY)
+                inst.components.talker:Say(STRINGS.TELEPORTATOMOD.PLAYERS_TOO_FAR_AWAY)
                 everybody_nearby = false
                 break
             end
         end
         if everybody_nearby then
-            inst.components.talker:Say(STRINGS.MAXWELL_DOOR_ENTER)
+            inst.components.talker:Say(STRINGS.TELEPORTATOMOD.MAXWELL_DOOR_ENTER)
             inst.SoundEmitter:KillSound("talk")
             inst.SoundEmitter:PlaySound("dontstarve/common/teleportato/teleportato_maxwelllaugh", "teleportato_laugh")
             for k, v in pairs(AllPlayers) do
@@ -49,7 +52,7 @@ local function OnRejectAdventure(inst)
     player.components.health:SetInvincible(false) -- remove invincible 
     local userid = player and player.userid
     if userid and userid == inst.valid_adventureSerpleader_id then
-        inst.components.talker:Say(STRINGS.PLAYER_REJECT_ENTER)
+        inst.components.talker:Say(STRINGS.TELEPORTATOMOD.PLAYER_REJECT_ENTER)
         inst.components.activatable.inactive = true
     end
 end
@@ -108,15 +111,15 @@ local function OnAdventureLeaderDirty(inst)
         end
 
         local yes_box = {
-            text = STRINGS.DIALOG_ADV_GO,
+            text = STRINGS.TELEPORTATOMOD.DIALOG_ADV_GO,
             cb = start_adventure
         }
         local no_box = {
-            text = STRINGS.DIALOG_ADV_STAY,
+            text = STRINGS.TELEPORTATOMOD.DIALOG_ADV_STAY,
             cb = reject_adventure
         }
 
-        local bpds = BigPopupDialogScreen(STRINGS.DIALOG_ADV_TITLE, STRINGS.DIALOG_ADV_BODYTEXT, {yes_box, no_box})
+        local bpds = BigPopupDialogScreen(STRINGS.TELEPORTATOMOD.DIALOG_ADV_TITLE, STRINGS.TELEPORTATOMOD.DIALOG_ADV_BODYTEXT, {yes_box, no_box})
         bpds.title:SetPosition(0, 85, 0)
         bpds.text:SetPosition(0, -15, 0)
 
