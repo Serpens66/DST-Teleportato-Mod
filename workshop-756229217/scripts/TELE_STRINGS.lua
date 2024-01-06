@@ -38,8 +38,35 @@ STRINGS.TELEPORTATOMOD.TELE_DISABLED =
 STRINGS.TELEPORTATOMOD.PLAYERS_TOO_FAR_AWAY = "Somebody is too far away..."
 STRINGS.TELEPORTATOMOD.MAXWELL_DOOR_ENTER = "HA-HA-HA!"
 STRINGS.TELEPORTATOMOD.PLAYER_REJECT_ENTER = "Maybe next time..."
+
+-- ############################
+-- ## adventure mode
+
 STRINGS.TELEPORTATOMOD.DIALOG_ADV_TITLE = "Doorway to Adventure!"
 STRINGS.TELEPORTATOMOD.DIALOG_ADV_BODYTEXT =
     "You are about to embark on a long, arduous expedition to locate something familiar. You will need to survive five randomly chosen worlds, each presenting you with a unique challenge. You won't come back to this world."
 STRINGS.TELEPORTATOMOD.DIALOG_ADV_GO = "Go"
 STRINGS.TELEPORTATOMOD.DIALOG_ADV_STAY = "Stay"
+
+if STRINGS.TELEPORTATOMOD.SUBTITLES==nil then
+    STRINGS.TELEPORTATOMOD.SUBTITLES = {
+      "Prologue", 
+      "Chapter 1 of 5",
+      "Chapter 2 of 5",
+      "Chapter 3 of 5",
+      "Chapter 4 of 5",
+      "Chapter 5 of 5",
+      "Epilogue",
+    }
+end
+if STRINGS.TELEPORTATOMOD.TITLES==nil then
+    STRINGS.TELEPORTATOMOD.TITLES = {}
+end
+STRINGS.TELEPORTATOMOD.TITLES["Maxwells Door"] = "Maxwells Door"
+STRINGS.TELEPORTATOMOD.TITLES["A Cold Reception"] = "A Cold Reception"
+STRINGS.TELEPORTATOMOD.TITLES["King of Winter"] = "King of Winter"
+STRINGS.TELEPORTATOMOD.TITLES["The Game is Afoot"] = "The Game is Afoot"
+STRINGS.TELEPORTATOMOD.TITLES["Archipelago"] = "Archipelago"
+STRINGS.TELEPORTATOMOD.TITLES["Two Worlds"] = "Two Worlds"
+STRINGS.TELEPORTATOMOD.TITLES["Darkness"] = "Darkness"
+STRINGS.TELEPORTATOMOD.TITLES["Checkmate"] = "Checkmate"

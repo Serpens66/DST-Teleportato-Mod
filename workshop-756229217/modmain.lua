@@ -429,12 +429,10 @@ local function TitleStufff(inst) -- inst is player
 
         local title = "test"
         local subtitle = "test"
-        if chapter and chapter > 1 then -- show title and chapter
-            title = WORLDS[level].name
-            subtitle = _G.STRINGS.UI.SANDBOXMENU.CHAPTERS[chapter - 1] -- our chapter goes from 1 to 7 (including prologue and epilogue), while DS chapter goes from 1 to 5/6
-        elseif chapter and chapter == 1 then
-            title = WORLDS[level].name
-            subtitle = "Prologue"
+
+        if chapter then -- show title and chapter
+            title = _G.STRINGS.TELEPORTATOMOD.TITLES[WORLDS[level].name] or WORLDS[level].name
+            subtitle = _G.STRINGS.TELEPORTATOMOD.SUBTITLES[chapter] -- our chapter goes from 1 to 7 (including prologue and epilogue)
         end
         -- print("HIER TITLESTUFF funktion chapter: "..tostring(chapter).."title: "..tostring(title).." subtitle: "..tostring(subtitle))
         _G.TheFrontEnd:ShowTitle(title, subtitle)
@@ -885,6 +883,21 @@ AddPrefabPostInit("world", function(world) -- prefabpostinits are never called f
         if world.ismastershard and _G.next(WORLDS) then -- telebase and these componets only to the mastershard. teleparts can be transferred between worlds.
             world:AddComponent("adventurejump") -- better add this after worldjump, cause the jump itself uses worldjump
         end
+        
+        -- does not work like this, we have to find another solution to remove sharkboi and other unwanted world components...
+        -- remove eg. the sharkboimanager component from the world, so we do not spawn this ice-island in adventure worlds
+        -- level ist hier noch nicht defined, und ich glaube removecomponent ist auch nicht der richtige weg, muss anders gehen.. (zb in der componente oder forest.lua muss ein wert gerprüft werden und dann entsprehcend nihts gemacht werden wenns auf disabled gesetzt ist oderso)
+        -- if _G.next(WORLDS) then
+            -- local level = _G.TUNING.TELEPORTATOMOD.LEVEL
+            -- if WORLDS[level].WorldComponentsToRemove then
+              -- for worldtag,component in pairs(WorldComponentsToRemove) do
+                -- if world:HasTag(worldtag) then
+                  -- world:RemoveComponent(component)
+                -- end
+              -- end
+            -- end
+        -- end
+        
         world:AddComponent("adv_startstuff") -- aldo add this to client
 
         world:ListenForEvent("ms_playerdespawnandmigrate", function(world, data)
