@@ -43,3 +43,5 @@ STRINGS.TELEPORTATOMOD.DIALOG_ADV_BODYTEXT =
     "You are about to embark on a long, arduous expedition to locate something familiar. You will need to survive five randomly chosen worlds, each presenting you with a unique challenge. You won't come back to this world."
 STRINGS.TELEPORTATOMOD.DIALOG_ADV_GO = "Go"
 STRINGS.TELEPORTATOMOD.DIALOG_ADV_STAY = "Stay"
+
+STRINGS.TELEPORTATOMOD.TITLE_PROLOGUE = "Prologue"

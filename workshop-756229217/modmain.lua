@@ -430,11 +430,27 @@ local function TitleStufff(inst) -- inst is player
         local title = "test"
         local subtitle = "test"
         if chapter and chapter > 1 then -- show title and chapter
-            title = WORLDS[level].name
-            subtitle = _G.STRINGS.UI.SANDBOXMENU.CHAPTERS[chapter - 1] -- our chapter goes from 1 to 7 (including prologue and epilogue), while DS chapter goes from 1 to 5/6
-        elseif chapter and chapter == 1 then
-            title = WORLDS[level].name
-            subtitle = "Prologue"
+            if _G.TUNING.TELEPORTATOMOD.WORLDS_NAME == nil then
+                    title = WORLDS[level].name
+                else
+                    title = _G.TUNING.TELEPORTATOMOD.WORLDS_NAME[level - 1]
+                    if title == nil then
+                        title = WORLDS[level].name 
+                    end
+                end
+                subtitle = _G.STRINGS.UI.SANDBOXMENU.CHAPTERS[chapter - 1] -- our chapter goes from 1 to 7 (including prologue and epilogue), while DS chapter goes from 1 to 5/6
+            elseif chapter and chapter == 1 then
+                title = WORLDS[level].name
+                subtitle = "Prologue"
+                if _G.TUNING.TELEPORTATOMOD.WORLDS_NAME == nil then
+                    title = WORLDS[level].name
+                else
+                    title = _G.TUNING.TELEPORTATOMOD.WORLDS_NAME[level - 1]
+                    if title == nil then
+                        title = WORLDS[level].name 
+                    end
+                end
+                subtitle = _G.STRINGS.TELEPORTATOMOD.TITLE_PROLOGUE
         end
         -- print("HIER TITLESTUFF funktion chapter: "..tostring(chapter).."title: "..tostring(title).." subtitle: "..tostring(subtitle))
         _G.TheFrontEnd:ShowTitle(title, subtitle)
