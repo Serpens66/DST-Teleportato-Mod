@@ -88,7 +88,8 @@ if _G.next(WORLDS) then
     -- stuff from DarkXero to make adventure progress:
     local io = _G.io
     local json = _G.json
-    local tmp_filepath = MODROOT.."adventure"
+    -- local tmp_filepath = MODROOT.."adventure" -- not allowed anymore to create files there
+    local tmp_filepath = "unsafedata/adventure_mod_serp.txt"
 
     _G.MakeTemporalAdventureFile = function(json_string)
         local advfile = io.open(tmp_filepath, "w")

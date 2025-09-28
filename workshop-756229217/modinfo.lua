@@ -2,7 +2,7 @@
 name = "Teleportato"
 description = "Adds the teleportato parts to the World generation and makes the Divining Rod craftable. In the settings of mod, you can choose what should happen, when teleportato is complete and if a new world should be generated if activated. Better don't add this mod to already generated world and don't deactivate it if you had it active at world generation! Admin can use say-command /worldjump to generate new world. Stuff from players at cave wont be saved (unless you have GEMAPI active)!\nOther mods can add adventure like worlds!"
 author = "Serpens66"
-version = "1.282"
+version = "1.283"
 
 -- This is the URL name of the mod's thread on the forum; the part after the index.php? and before the first & in the URL
 -- Example:
